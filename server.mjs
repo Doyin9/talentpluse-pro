@@ -49,6 +49,24 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (req.method === 'POST' && req.url === '/api/applications') {
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', () => {
+      try {
+        const newApp = JSON.parse(body);
+        newApp.id = Date.now();
+        newApp.status = 'Pending';
+        newApp.score = '92%';
+        applications.unshift(newApp);
+        fs.writeFileSync(APPS_FILE, JSON.stringify(applications, null, 2));
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true }));
+      } catch (e) { res.writeHead(400); res.end(); }
+    });
+    return;
+  }
+
   if (req.method === 'GET' && req.url === '/api/jobs') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(jobs));
@@ -61,7 +79,8 @@ const server = http.createServer((req, res) => {
   const appCards = applications.map(a => `
     <div style="background:#1e293b; padding:12px; border-radius:8px; margin-bottom:10px; border:1px solid #334155;">
       <h4 style="margin:0 0 4px 0; color:#f8fafc; font-size:14px;">${a.name} <span style="background:#16a34a; color:#fff; font-size:10px; padding:2px 5px; border-radius:4px;">${a.score || '90%'}</span></h4>
-      <p style="margin:0; color:#94a3b8; font-size:12px;">Applied for: ${a.jobTitle} (${a.company}) &bull; ${a.email}</p>
+      <p style="margin:0 0 4px 0; color:#94a3b8; font-size:12px;">Applied for: <strong>${a.jobTitle}</strong> (${a.company})</p>
+      <p style="margin:0; color:#64748b; font-size:11px;">Email: ${a.email} &bull; Link: <a href="${a.resume}" target="_blank" style="color:#38bdf8;">View Profile</a></p>
     </div>
   `).join('');
 
@@ -84,12 +103,16 @@ const server = http.createServer((req, res) => {
         .search-box { position: relative; margin-bottom: 15px; }
         .search-box input { padding-left: 35px; border-color: #38bdf8; }
         .search-icon { position: absolute; left: 10px; top: 10px; color: #94a3b8; font-size: 14px; }
+        /* Modal Styles */
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; padding: 15px; box-sizing: border-box; }
+        .modal-content { background: #1e293b; padding: 20px; border-radius: 10px; width: 100%; max-width: 400px; border: 1px solid #334155; position: relative; }
+        .close-btn { position: absolute; top: 10px; right: 15px; background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer; }
       </style>
     </head>
     <body>
       <div class="container">
         <h1>TalentPulse PRO</h1>
-        <div class="subtitle">Direct Access Mode &mdash; Phase 1: Complete Core Management</div>
+        <div class="subtitle">Direct Access Mode &mdash; Phase 2: Interactive Candidate Workflow</div>
 
         <div class="card">
           <h2 class="section-title">Available Job Board</h2>
@@ -118,6 +141,23 @@ const server = http.createServer((req, res) => {
         </div>
       </div>
 
+      <!-- Quick Apply Modal -->
+      <div id="applyModal" class="modal">
+        <div class="modal-content">
+          <button class="close-btn" onclick="closeModal()">&times;</button>
+          <h3 style="color:#38bdf8; margin-top:0;" id="modalJobTitle">Quick Apply</h3>
+          <p style="color:#94a3b8; font-size:12px; margin-bottom:15px;" id="modalCompany"></p>
+          <form id="applyForm">
+            <input type="hidden" id="applyJobTitle">
+            <input type="hidden" id="applyCompany">
+            <input type="text" id="applicantName" placeholder="Your Full Name" required>
+            <input type="email" id="applicantEmail" placeholder="Your Email Address" required>
+            <input type="url" id="applicantResume" placeholder="Portfolio or LinkedIn URL" required>
+            <button type="submit" class="submit-btn">Submit Application</button>
+          </form>
+        </div>
+      </div>
+
       <script>
         const allJobs = ${JSON.stringify(jobs)};
 
@@ -134,7 +174,7 @@ const server = http.createServer((req, res) => {
               <p style="margin:0 0 8px 0; color:#94a3b8; font-size:13px;">\${j.company} &bull; \${j.location || 'Remote'}</p>
               <div style="margin-bottom:10px;"><span style="background:#0284c7; color:#fff; font-size:11px; padding:2px 6px; border-radius:4px;">90% ATS Match</span></div>
               <p style="margin:0 0 10px 0; font-weight:bold; color:#f1f5f9; font-size:14px;">💰 \${j.salary || '$80,000/yr'}</p>
-              <button style="width:100%; background:#2563eb; color:#fff; border:none; padding:8px; border-radius:6px; font-weight:bold; cursor:pointer;">Quick Apply</button>
+              <button onclick="openApplyModal('\${j.title}', '\${j.company}')" style="width:100%; background:#2563eb; color:#fff; border:none; padding:8px; border-radius:6px; font-weight:bold; cursor:pointer;">Quick Apply</button>
             </div>
           \`).join('');
         }
@@ -149,8 +189,19 @@ const server = http.createServer((req, res) => {
           renderJobs(filtered);
         }
 
-        // Initial Render
         renderJobs(allJobs);
+
+        function openApplyModal(title, company) {
+          document.getElementById('modalJobTitle').innerText = 'Apply for: ' + title;
+          document.getElementById('modalCompany').innerText = company;
+          document.getElementById('applyJobTitle').value = title;
+          document.getElementById('applyCompany').value = company;
+          document.getElementById('applyModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+          document.getElementById('applyModal').style.display = 'none';
+        }
 
         document.getElementById('jobForm').addEventListener('submit', async (e) => {
           e.preventDefault();
@@ -162,6 +213,22 @@ const server = http.createServer((req, res) => {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ title, company, salary })
+          });
+          window.location.reload();
+        });
+
+        document.getElementById('applyForm').addEventListener('submit', async (e) => {
+          e.preventDefault();
+          const jobTitle = document.getElementById('applyJobTitle').value;
+          const company = document.getElementById('applyCompany').value;
+          const name = document.getElementById('applicantName').value;
+          const email = document.getElementById('applicantEmail').value;
+          const resume = document.getElementById('applicantResume').value;
+
+          await fetch('/api/applications', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ jobTitle, company, name, email, resume })
           });
           window.location.reload();
         });
