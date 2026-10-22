@@ -1,4 +1,4 @@
-        function switchAuthTab(mode) {
+                function switchAuthTab(mode) {
           alert("Button tapped! Mode: " + mode); // Temporary test alert
           const loginBtn = document.getElementById('loginTabBtn');
           const signupBtn = document.getElementById('signupTabBtn');
