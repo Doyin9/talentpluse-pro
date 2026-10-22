@@ -1,0 +1,12 @@
+{
+  "name": "talentpluse-pro",
+  "version": "1.0.0",
+  "type": "module",
+  "main": "server.mjs",
+  "dependencies": {
+    "express": "^4.19.2"
+  },
+  "scripts": {
+    "start": "node server.mjs"
+  }
+}
