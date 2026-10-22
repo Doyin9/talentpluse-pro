@@ -1,4 +1,4 @@
-import http from 'http';
+ import http from 'http';
 import fs from 'fs';
 
 const JOBS_FILE = 'jobs.json';
@@ -153,7 +153,7 @@ const server = http.createServer((req, res) => {
     <body>
       <div class="container">
         <h1>TalentPulse PRO</h1>
-        <div class="subtitle">Direct Access Mode &mdash; Phase 3: Candidate Status Management</div>
+        <div class="subtitle">Direct Access Mode &mdash; Complete Production Release</div>
 
         <div class="card">
           <h2 class="section-title">Available Job Board</h2>
