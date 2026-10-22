@@ -1,29 +1,13 @@
-                        function switchAuthTab(mode) {
-          const loginBtn = document.getElementById('loginTabBtn');
-          const signupBtn = document.getElementById('signupTabBtn');
-          const loginForm = document.getElementById('loginForm');
-          const signupForm = document.getElementById('signupForm');
-          
-          document.getElementById('loginError').style.display = 'none';
-          document.getElementById('signupError').style.display = 'none';
-
-          if (mode === 'login') {
-            loginBtn.style.background = '#2563eb';
-            loginBtn.style.color = '#fff';
-            loginBtn.style.borderColor = '#2563eb';
-            signupBtn.style.background = '#0f172a';
-            signupBtn.style.color = '#94a3b8';
-            signupBtn.style.borderColor = '#334155';
-            loginForm.style.display = 'block';
-            signupForm.style.display = 'none';
-          } else {
-            signupBtn.style.background = '#2563eb';
-            signupBtn.style.color = '#fff';
-            signupBtn.style.borderColor = '#2563eb';
-            loginBtn.style.background = '#0f172a';
-            loginBtn.style.color = '#94a3b8';
-            loginBtn.style.borderColor = '#334155';
-            signupForm.style.display = 'block';
-            loginForm.style.display = 'none';
-          }
-        }
+                                <!-- Signup Form with Full Details -->
+        <form id="signupForm" style="display:none;" onsubmit="handleSignup(event)">
+          <input type="text" id="signupFirstName" placeholder="First Name" required>
+          <input type="text" id="signupMiddleName" placeholder="Middle Name (Optional)">
+          <input type="text" id="signupUsername" placeholder="Username" required>
+          <input type="email" id="signupEmail" placeholder="Email Address" required>
+          <input type="password" id="signupPassword" placeholder="Password" required>
+          <div style="font-size:11px; color:#94a3b8; margin-bottom:10px;">
+            <input type="checkbox" id="termsCheck" required style="width:auto; margin-right:5px;"> I agree to the terms and privacy policy.
+          </div>
+          <button type="submit" id="signupSubmitBtn" class="submit-btn" style="background:#2563eb;">Create Account</button>
+          <p id="signupError" style="color:#ef4444; font-size:12px; text-align:center; margin-top:10px; display:none;"></p>
+        </form>
