@@ -1,4 +1,4 @@
- import http from 'http';
+import http from 'http';
 import fs from 'fs';
 
 const JOBS_FILE = 'jobs.json';
@@ -393,4 +393,78 @@ const server = http.createServer((req, res) => {
             const company = document.getElementById('company').value;
             const salary = document.getElementById('salary').value;
             
-            const res = await fetch('/
+            const res = await fetch('/api/jobs', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ title, company, salary })
+    });
+
+    if (res.ok) {
+      window.location.href = window.location.pathname + '?t=' + Date.now();
+    }
+  });
+}
+
+document.getElementById('applyForm').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = document.getElementById('applyBtn');
+  btn.innerText = 'Submitting...';
+  btn.disabled = true;
+
+  const jobTitle = document.getElementById('applyJobTitle').value;
+  const company = document.getElementById('applyCompany').value;
+  const name = document.getElementById('applicantName').value;
+  const email = document.getElementById('applicantEmail').value;
+  const resume = document.getElementById('applicantResume').value;
+
+  const res = await fetch('/api/applications', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ jobTitle, company, name, email, resume })
+  });
+
+  if (res.ok) {
+    alert('Application submitted successfully!');
+    closeModal();
+    window.location.reload();
+  }
+});
+
+async function updateStatus(id, status) {
+  const res = await fetch('/api/applications/' + id + '/status', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ status })
+  });
+  if (res.ok) {
+    window.location.href = window.location.pathname + '?t=' + Date.now();
+  }
+}
+
+async function deleteApp(id) {
+  if (confirm('Remove this application?')) {
+    const res = await fetch('/api/applications/' + id, { method: 'DELETE' });
+    if (res.ok) {
+      window.location.href = window.location.pathname + '?t=' + Date.now();
+    }
+  }
+}
+
+async function deleteJob(id) {
+  if (confirm('Delete this job listing?')) {
+    const res = await fetch('/api/jobs/' + id, { method: 'DELETE' });
+    if (res.ok) {
+      window.location.href = window.location.pathname + '?t=' + Date.now();
+    }
+  }
+}
+      </script>
+    </body>
+    </html>
+  `;
+
+  res.end(html);
+});
+
+const PORT = process.env.PORT || 3000;
+server.listen(PORT, () => console.log(`Server running on port ${PORT}`));
