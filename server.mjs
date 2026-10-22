@@ -153,7 +153,7 @@ const server = http.createServer((req, res) => {
     <body>
       <div class="container">
         <h1>TalentPulse PRO</h1>
-        <div class="subtitle">Direct Access Mode &mdash; Complete Production Release</div>
+        <div class="subtitle">Direct Access Mode &mdash; Real-Time Interactive System</div>
 
         <div class="card">
           <h2 class="section-title">Available Job Board</h2>
@@ -172,7 +172,7 @@ const server = http.createServer((req, res) => {
             <input type="text" id="title" placeholder="Job Title (e.g. Backend Engineer)" required>
             <input type="text" id="company" placeholder="Company Name (e.g. TechCorp)" required>
             <input type="text" id="salary" placeholder="Salary Range (e.g. $90,000/yr)">
-            <button type="submit" class="submit-btn">Publish Job Listing</button>
+            <button type="submit" id="publishBtn" class="submit-btn">Publish Job Listing</button>
           </form>
         </div>
 
@@ -194,7 +194,7 @@ const server = http.createServer((req, res) => {
             <input type="text" id="applicantName" placeholder="Your Full Name" required>
             <input type="email" id="applicantEmail" placeholder="Your Email Address" required>
             <input type="url" id="applicantResume" placeholder="Portfolio or LinkedIn URL" required>
-            <button type="submit" class="submit-btn">Submit Application</button>
+            <button type="submit" id="applyBtn" class="submit-btn">Submit Application</button>
           </form>
         </div>
       </div>
@@ -246,54 +246,74 @@ const server = http.createServer((req, res) => {
 
         document.getElementById('jobForm').addEventListener('submit', async (e) => {
           e.preventDefault();
+          const btn = document.getElementById('publishBtn');
+          btn.innerText = 'Publishing...';
+          btn.disabled = true;
+
           const title = document.getElementById('title').value;
           const company = document.getElementById('company').value;
           const salary = document.getElementById('salary').value;
           
-          await fetch('/api/jobs', {
+          const res = await fetch('/api/jobs', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ title, company, salary })
           });
-          window.location.reload();
+
+          if (res.ok) {
+            window.location.href = window.location.pathname + '?t=' + Date.now();
+          }
         });
 
         document.getElementById('applyForm').addEventListener('submit', async (e) => {
           e.preventDefault();
+          const btn = document.getElementById('applyBtn');
+          btn.innerText = 'Submitting...';
+          btn.disabled = true;
+
           const jobTitle = document.getElementById('applyJobTitle').value;
           const company = document.getElementById('applyCompany').value;
           const name = document.getElementById('applicantName').value;
           const email = document.getElementById('applicantEmail').value;
           const resume = document.getElementById('applicantResume').value;
 
-          await fetch('/api/applications', {
+          const res = await fetch('/api/applications', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ jobTitle, company, name, email, resume })
           });
-          window.location.reload();
+
+          if (res.ok) {
+            window.location.href = window.location.pathname + '?t=' + Date.now();
+          }
         });
 
         async function updateStatus(id, status) {
-          await fetch('/api/applications/' + id + '/status', {
+          const res = await fetch('/api/applications/' + id + '/status', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({ status })
           });
-          window.location.reload();
+          if (res.ok) {
+            window.location.href = window.location.pathname + '?t=' + Date.now();
+          }
         }
 
         async function deleteApp(id) {
           if (confirm('Remove this application?')) {
-            await fetch('/api/applications/' + id, { method: 'DELETE' });
-            window.location.reload();
+            const res = await fetch('/api/applications/' + id, { method: 'DELETE' });
+            if (res.ok) {
+              window.location.href = window.location.pathname + '?t=' + Date.now();
+            }
           }
         }
 
         async function deleteJob(id) {
           if (confirm('Delete this job listing?')) {
-            await fetch('/api/jobs/' + id, { method: 'DELETE' });
-            window.location.reload();
+            const res = await fetch('/api/jobs/' + id, { method: 'DELETE' });
+            if (res.ok) {
+              window.location.href = window.location.pathname + '?t=' + Date.now();
+            }
           }
         }
       </script>
