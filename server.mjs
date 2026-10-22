@@ -132,30 +132,32 @@ app.get('/', (req, res) => {
       }
     }
 
-    async function handleSignup(e) {
-      e.preventDefault();
-      const firstName = document.getElementById('signupFirstName').value;
-      const middleName = document.getElementById('signupMiddleName').value;
-      const username = document.getElementById('signupUsername').value;
-      const email = document.getElementById('signupEmail').value;
-      const password = document.getElementById('signupPassword').value;
+            async function handleSignup(e) {
+          e.preventDefault();
+                    const firstName = document.getElementById('signupFirstName').value;
+          const middleName = document.getElementById('signupMiddleName').value;
+          const username = document.getElementById('signupUsername').value;
+          const email = document.getElementById('signupEmail').value;
+          const password = document.getElementById('signupPassword').value;
+          
+          const res = await fetch('/api/signup', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ firstName, middleName, username, email, password })
+          });
+          const data = await res.json();
 
-      const res = await fetch('/api/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ firstName, middleName, username, email, password })
-      });
-      const data = await res.json();
+          if (data.success) {
+            alert('Account created successfully! Please login.');
+            switchAuthTab('login');
+          } else {
+            const errEl = document.getElementById('signupError');
+            errEl.innerText = data.message || 'Signup failed';
+            errEl.style.display = 'block';
+          }
+        }
+        
 
-      if (data.success) {
-        alert('Account created successfully! Please login.');
-        switchAuthTab('login');
-      } else {
-        const errEl = document.getElementById('signupError');
-        errEl.innerText = data.message || 'Signup failed';
-        errEl.style.display = 'block';
-      }
-    }
   </script>
 </body>
 </html>`);
