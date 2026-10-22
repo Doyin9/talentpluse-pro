@@ -1,9 +1,11 @@
-                function switchAuthTab(mode) {
-          alert("Button tapped! Mode: " + mode); // Temporary test alert
+                        function switchAuthTab(mode) {
           const loginBtn = document.getElementById('loginTabBtn');
           const signupBtn = document.getElementById('signupTabBtn');
           const loginForm = document.getElementById('loginForm');
           const signupForm = document.getElementById('signupForm');
+          
+          document.getElementById('loginError').style.display = 'none';
+          document.getElementById('signupError').style.display = 'none';
 
           if (mode === 'login') {
             loginBtn.style.background = '#2563eb';
