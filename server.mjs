@@ -32,7 +32,6 @@ if (!applications || applications.length === 0) applications = [...defaultApps];
 if (!users || users.length === 0) users = [...defaultUsers];
 
 const server = http.createServer((req, res) => {
-  // Handle Signup API
   if (req.method === 'POST' && req.url === '/api/signup') {
     let body = '';
     req.on('data', chunk => { body += chunk; });
@@ -55,7 +54,6 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // Handle Login API
   if (req.method === 'POST' && req.url === '/api/login') {
     let body = '';
     req.on('data', chunk => { body += chunk; });
@@ -153,7 +151,6 @@ const server = http.createServer((req, res) => {
     return;
   }
 
-  // Render HTML interface with Authentication Wrapper
   res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
 
   const appCards = applications.map(a => {
@@ -206,7 +203,6 @@ const server = http.createServer((req, res) => {
       </style>
     </head>
     <body>
-      <!-- AUTH SECTION -->
       <div id="authView" class="auth-container">
         <h1>TalentPulse PRO</h1>
         <div class="subtitle">Secure Portal Login</div>
@@ -225,7 +221,6 @@ const server = http.createServer((req, res) => {
         </p>
       </div>
 
-      <!-- MAIN APP CONTAINER -->
       <div id="appView" class="container" style="display:none;">
         <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
           <div>
@@ -244,7 +239,6 @@ const server = http.createServer((req, res) => {
           <div id="jobList"></div>
         </div>
 
-        <!-- Admin Only Section -->
         <div id="adminPostCard" class="card" style="display:none;">
           <h2 class="section-title">Post a New Job Listing (Admin)</h2>
           <form id="jobForm">
@@ -255,14 +249,12 @@ const server = http.createServer((req, res) => {
           </form>
         </div>
 
-        <!-- Admin Only Applications Section -->
         <div id="adminAppCard" class="card" style="display:none;">
           <h2 class="section-title">Received Applications & Candidate Status</h2>
           <div>${appCards}</div>
         </div>
       </div>
 
-      <!-- Quick Apply Modal -->
       <div id="applyModal" class="modal">
         <div class="modal-content">
           <button class="close-btn" onclick="closeModal()">&times;</button>
@@ -291,7 +283,6 @@ const server = http.createServer((req, res) => {
           document.getElementById('authError').style.display = 'none';
         }
 
-        // Check Local Storage Session on Load
         window.onload = function() {
           const savedUser = localStorage.getItem('talentPulseUser');
           if (savedUser) {
@@ -351,7 +342,7 @@ const server = http.createServer((req, res) => {
 
           jobContainer.innerHTML = jobsToDisplay.map(j => \`
             <div style="background:#1e293b; padding:15px; border-radius:8px; margin-bottom:12px; border:1px solid #334155; position:relative;">
-              \${isAdmin ? \`<button onclick="deleteJob(\${j.id})" style="position:absolute; top:12px; right:12px; background:#ef4444; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:12px;">Delete</button>\` : ''}
+              \${isAdmin ? \\\`<button onclick="deleteJob(\\\${j.id})" style="position:absolute; top:12px; right:12px; background:#ef4444; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:12px;">Delete</button>\\\` : ''}
               <h3 style="margin:0 0 5px 0; color:#38bdf8; font-size:16px;">\${j.title}</h3>
               <p style="margin:0 0 8px 0; color:#94a3b8; font-size:13px;">\${j.company} &bull; \${j.location || 'Remote'}</p>
               <div style="margin-bottom:10px;"><span style="background:#0284c7; color:#fff; font-size:11px; padding:2px 6px; border-radius:4px;">90% ATS Match</span></div>
@@ -372,4 +363,34 @@ const server = http.createServer((req, res) => {
         }
 
         function openApplyModal(title, company) {
-          document.getElementById('
+          document.getElementById('modalJobTitle').innerText = 'Apply for: ' + title;
+          document.getElementById('modalCompany').innerText = company;
+          document.getElementById('applyJobTitle').value = title;
+          document.getElementById('applyCompany').value = company;
+          document.getElementById('applyModal').style.display = 'flex';
+        }
+
+        function closeModal() {
+          document.getElementById('applyModal').style.display = 'none';
+        }
+
+        const jobForm = document.getElementById('jobForm');
+        if (jobForm) {
+          jobForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const btn = document.getElementById('publishBtn');
+            btn.innerText = 'Publishing...';
+            btn.disabled = true;
+
+            const title = document.getElementById('title').value;
+            const company = document.getElementById('company').value;
+            const salary = document.getElementById('salary').value;
+            
+            const res = await fetch('/api/jobs', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ title, company, salary })
+            });
+
+            if (res.ok) {
+              window.location.href = window.location.pathname + '?t=' + Date.now();
