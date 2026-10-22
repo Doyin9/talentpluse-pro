@@ -134,7 +134,7 @@ app.get('/', (req, res) => {
 
             async function handleSignup(e) {
           e.preventDefault();
-                    const firstName = document.getElementById('signupFirstName').value;
+                   const firstName = document.getElementById('signupFirstName').value;
           const middleName = document.getElementById('signupMiddleName').value;
           const username = document.getElementById('signupUsername').value;
           const email = document.getElementById('signupEmail').value;
