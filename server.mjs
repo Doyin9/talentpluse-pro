@@ -11,7 +11,7 @@ let defaultJobs = [
 ];
 
 let defaultApps = [
-  { id: 1, jobTitle: 'Frontend Developer', company: 'TechCorp', name: 'John Doe', email: 'john@example.com', status: 'Pending', score: '90%' }
+  { id: 1, jobTitle: 'Frontend Developer', company: 'TechCorp', name: 'John Doe', email: 'john@example.com', status: 'Pending', score: '90%', resume: 'https://linkedin.com' }
 ];
 
 let jobs = [];
@@ -67,6 +67,35 @@ const server = http.createServer((req, res) => {
     return;
   }
 
+  if (req.method === 'DELETE' && req.url.startsWith('/api/applications/')) {
+    const appId = parseInt(req.url.split('/')[3]);
+    applications = applications.filter(a => a.id !== appId);
+    fs.writeFileSync(APPS_FILE, JSON.stringify(applications, null, 2));
+    res.writeHead(200, { 'Content-Type': 'application/json' });
+    res.end(JSON.stringify({ success: true }));
+    return;
+  }
+
+  if (req.method === 'POST' && req.url.includes('/status')) {
+    const parts = req.url.split('/');
+    const appId = parseInt(parts[3]);
+    let body = '';
+    req.on('data', chunk => { body += chunk; });
+    req.on('end', () => {
+      try {
+        const { status } = JSON.parse(body);
+        const app = applications.find(a => a.id === appId);
+        if (app) {
+          app.status = status;
+          fs.writeFileSync(APPS_FILE, JSON.stringify(applications, null, 2));
+        }
+        res.writeHead(200, { 'Content-Type': 'application/json' });
+        res.end(JSON.stringify({ success: true }));
+      } catch (e) { res.writeHead(400); res.end(); }
+    });
+    return;
+  }
+
   if (req.method === 'GET' && req.url === '/api/jobs') {
     res.writeHead(200, { 'Content-Type': 'application/json' });
     res.end(JSON.stringify(jobs));
@@ -76,13 +105,26 @@ const server = http.createServer((req, res) => {
   // Render HTML interface
   res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
 
-  const appCards = applications.map(a => `
-    <div style="background:#1e293b; padding:12px; border-radius:8px; margin-bottom:10px; border:1px solid #334155;">
-      <h4 style="margin:0 0 4px 0; color:#f8fafc; font-size:14px;">${a.name} <span style="background:#16a34a; color:#fff; font-size:10px; padding:2px 5px; border-radius:4px;">${a.score || '90%'}</span></h4>
-      <p style="margin:0 0 4px 0; color:#94a3b8; font-size:12px;">Applied for: <strong>${a.jobTitle}</strong> (${a.company})</p>
-      <p style="margin:0; color:#64748b; font-size:11px;">Email: ${a.email} &bull; Link: <a href="${a.resume}" target="_blank" style="color:#38bdf8;">View Profile</a></p>
-    </div>
-  `).join('');
+  const appCards = applications.map(a => {
+    let badgeColor = '#eab308'; // Pending
+    if (a.status === 'Interviewing') badgeColor = '#38bdf8';
+    if (a.status === 'Hired') badgeColor = '#16a34a';
+    if (a.status === 'Rejected') badgeColor = '#ef4444';
+
+    return `
+      <div style="background:#1e293b; padding:12px; border-radius:8px; margin-bottom:10px; border:1px solid #334155; position:relative;">
+        <button onclick="deleteApp(${a.id})" style="position:absolute; top:12px; right:12px; background:#ef4444; color:#fff; border:none; padding:3px 6px; border-radius:4px; cursor:pointer; font-size:11px;">Remove</button>
+        <h4 style="margin:0 0 4px 0; color:#f8fafc; font-size:14px;">${a.name} <span style="background:${badgeColor}; color:#fff; font-size:10px; padding:2px 5px; border-radius:4px;">${a.status || 'Pending'}</span> <span style="background:#0284c7; color:#fff; font-size:10px; padding:2px 5px; border-radius:4px;">${a.score || '90%'}</span></h4>
+        <p style="margin:0 0 6px 0; color:#94a3b8; font-size:12px;">Applied for: <strong>${a.jobTitle}</strong> (${a.company})</p>
+        <p style="margin:0 0 8px 0; color:#64748b; font-size:11px;">Email: ${a.email} &bull; <a href="${a.resume}" target="_blank" style="color:#38bdf8;">View Profile</a></p>
+        <div style="display:flex; gap:5px; margin-top:5px;">
+          <button onclick="updateStatus(${a.id}, 'Interviewing')" style="background:#0284c7; color:#fff; border:none; padding:4px 8px; border-radius:4px; font-size:10px; cursor:pointer;">Interview</button>
+          <button onclick="updateStatus(${a.id}, 'Hired')" style="background:#16a34a; color:#fff; border:none; padding:4px 8px; border-radius:4px; font-size:10px; cursor:pointer;">Hire</button>
+          <button onclick="updateStatus(${a.id}, 'Rejected')" style="background:#64748b; color:#fff; border:none; padding:4px 8px; border-radius:4px; font-size:10px; cursor:pointer;">Reject</button>
+        </div>
+      </div>
+    `;
+  }).join('');
 
   const html = `
     <!DOCTYPE html>
@@ -103,7 +145,6 @@ const server = http.createServer((req, res) => {
         .search-box { position: relative; margin-bottom: 15px; }
         .search-box input { padding-left: 35px; border-color: #38bdf8; }
         .search-icon { position: absolute; left: 10px; top: 10px; color: #94a3b8; font-size: 14px; }
-        /* Modal Styles */
         .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.8); z-index: 1000; justify-content: center; align-items: center; padding: 15px; box-sizing: border-box; }
         .modal-content { background: #1e293b; padding: 20px; border-radius: 10px; width: 100%; max-width: 400px; border: 1px solid #334155; position: relative; }
         .close-btn { position: absolute; top: 10px; right: 15px; background: none; border: none; color: #94a3b8; font-size: 20px; cursor: pointer; }
@@ -112,7 +153,7 @@ const server = http.createServer((req, res) => {
     <body>
       <div class="container">
         <h1>TalentPulse PRO</h1>
-        <div class="subtitle">Direct Access Mode &mdash; Phase 2: Interactive Candidate Workflow</div>
+        <div class="subtitle">Direct Access Mode &mdash; Phase 3: Candidate Status Management</div>
 
         <div class="card">
           <h2 class="section-title">Available Job Board</h2>
@@ -232,6 +273,22 @@ const server = http.createServer((req, res) => {
           });
           window.location.reload();
         });
+
+        async function updateStatus(id, status) {
+          await fetch('/api/applications/' + id + '/status', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ status })
+          });
+          window.location.reload();
+        }
+
+        async function deleteApp(id) {
+          if (confirm('Remove this application?')) {
+            await fetch('/api/applications/' + id, { method: 'DELETE' });
+            window.location.reload();
+          }
+        }
 
         async function deleteJob(id) {
           if (confirm('Delete this job listing?')) {
