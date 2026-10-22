@@ -1,5 +1,5 @@
-                                import express from 'express';
-import fs from 'fs';
+ import fs from 'fs';
+import express from 'express';
 
 const app = express();
 app.use(express.json());
@@ -24,10 +24,12 @@ app.post('/api/signup', (req, res) => {
   if (!firstName || !username || !email || !password) {
     return res.json({ success: false, message: 'Please fill in all required fields.' });
   }
+
   const users = getUsers();
   if (users.find(u => u.username === username || u.email === email)) {
     return res.json({ success: false, message: 'Username or Email already exists.' });
   }
+
   users.push({ firstName, middleName, username, email, password });
   saveUsers(users);
   res.json({ success: true });
@@ -52,13 +54,13 @@ app.get('/', (req, res) => {
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>TalentPulse PRO</title>
   <style>
-    body { font-family: Arial, sans-serif; background: #0f172a; color: #fff; display: flex; justify-content: center; align-items: center; height: 100vh; margin: 0; }
-    .card { background: #1e293b; padding: 25px; border-radius: 12px; width: 100%; max-width: 400px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+    body { font-family: Arial, sans-serif; background: #0f172a; color: #fff; display: flex; justify-content: center; align-items: center; min-height: 100vh; margin: 0; }
+    .card { background: #1e293b; padding: 25px; border-radius: 12px; width: 100%; max-width: 400px; box-shadow: 0 4px 6px rgba(0, 0, 0, 0.3); }
     h2 { text-align: center; margin-bottom: 20px; color: #38bdf8; }
     .tabs { display: flex; margin-bottom: 20px; border-bottom: 2px solid #334155; }
-    .tab-btn { flex: 1; padding: 10px; background: none; border: none; color: #94a3b8; font-weight: bold; cursor: pointer; }
-    .tab-btn.active { color: #fff; border-bottom: 2px solid #2563eb; }
-    input { width: 100%; padding: 10px; margin-bottom: 12px; background: #0f172a; border: 1px solid #334155; color: #fff; border-radius: 6px; box-sizing: border-box; }
+    .tab-btn { flex: 1; padding: 10px; background: none; border: none; color: #94a3b8; font-size: 16px; font-weight: bold; cursor: pointer; }
+    .tab-btn.active { color: #fff; border-bottom: 2px solid #38bdf8; }
+    input { width: 100%; padding: 10px; margin-bottom: 12px; background: #0f172a; border: 1px solid #334155; border-radius: 6px; color: #fff; box-sizing: border-box; }
     .submit-btn { width: 100%; padding: 10px; background: #2563eb; color: #fff; border: none; border-radius: 6px; font-weight: bold; cursor: pointer; }
   </style>
 </head>
@@ -75,21 +77,18 @@ app.get('/', (req, res) => {
       <input type="text" id="loginUsername" placeholder="Username or Email" required>
       <input type="password" id="loginPassword" placeholder="Password" required>
       <button type="submit" class="submit-btn">Login</button>
-      <p id="loginError" style="color:#ef4444; font-size:12px; text-align:center; display:none;"></p>
+      <p id="loginError" style="color: #ef4444; font-size: 12px; display: none; text-align: center; margin-top: 10px;"></p>
     </form>
 
-    <!-- Signup Form with Full Details -->
-    <form id="signupForm" style="display:none;" onsubmit="handleSignup(event)">
+    <!-- Signup Form -->
+    <form id="signupForm" style="display: none;" onsubmit="handleSignup(event)">
       <input type="text" id="signupFirstName" placeholder="First Name" required>
       <input type="text" id="signupMiddleName" placeholder="Middle Name (Optional)">
       <input type="text" id="signupUsername" placeholder="Username" required>
       <input type="email" id="signupEmail" placeholder="Email Address" required>
       <input type="password" id="signupPassword" placeholder="Password" required>
-      <div style="font-size:11px; color:#94a3b8; margin-bottom:10px;">
-        <input type="checkbox" id="termsCheck" required style="width:auto; margin-right:5px;"> I agree to the terms and privacy policy.
-      </div>
       <button type="submit" class="submit-btn">Create Account</button>
-      <p id="signupError" style="color:#ef4444; font-size:12px; text-align:center; display:none;"></p>
+      <p id="signupError" style="color: #ef4444; font-size: 12px; display: none; text-align: center; margin-top: 10px;"></p>
     </form>
   </div>
 
@@ -99,7 +98,7 @@ app.get('/', (req, res) => {
       const signupBtn = document.getElementById('signupTabBtn');
       const loginForm = document.getElementById('loginForm');
       const signupForm = document.getElementById('signupForm');
-      
+
       if (mode === 'login') {
         loginBtn.classList.add('active');
         signupBtn.classList.remove('active');
@@ -117,12 +116,15 @@ app.get('/', (req, res) => {
       e.preventDefault();
       const username = document.getElementById('loginUsername').value;
       const password = document.getElementById('loginPassword').value;
+
       const res = await fetch('/api/login', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ username, password })
       });
+
       const data = await res.json();
+
       if (data.success) {
         alert('Login successful!');
       } else {
@@ -132,36 +134,35 @@ app.get('/', (req, res) => {
       }
     }
 
-            async function handleSignup(e) {
-          e.preventDefault();
-                   const firstName = document.getElementById('signupFirstName').value;
-          const middleName = document.getElementById('signupMiddleName').value;
-          const username = document.getElementById('signupUsername').value;
-          const email = document.getElementById('signupEmail').value;
-          const password = document.getElementById('signupPassword').value;
-          
-          const res = await fetch('/api/signup', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ firstName, middleName, username, email, password })
-          });
-          const data = await res.json();
+    async function handleSignup(e) {
+      e.preventDefault();
+      const firstName = document.getElementById('signupFirstName').value;
+      const middleName = document.getElementById('signupMiddleName').value;
+      const username = document.getElementById('signupUsername').value;
+      const email = document.getElementById('signupEmail').value;
+      const password = document.getElementById('signupPassword').value;
 
-          if (data.success) {
-            alert('Account created successfully! Please login.');
-            switchAuthTab('login');
-          } else {
-            const errEl = document.getElementById('signupError');
-            errEl.innerText = data.message || 'Signup failed';
-            errEl.style.display = 'block';
-          }
-        }
-        
+      const res = await fetch('/api/signup', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ firstName, middleName, username, email, password })
+      });
 
+      const data = await res.json();
+
+      if (data.success) {
+        alert('Account created successfully! Please login.');
+        switchAuthTab('login');
+      } else {
+        const errEl = document.getElementById('signupError');
+        errEl.innerText = data.message || 'Signup failed';
+        errEl.style.display = 'block';
+      }
+    }
   </script>
 </body>
 </html>`);
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log('Server running on port ' + PORT));
+app.listen(PORT, () => console.log(`Server running on port ${PORT}`));
