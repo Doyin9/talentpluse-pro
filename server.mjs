@@ -58,17 +58,6 @@ const server = http.createServer((req, res) => {
   // Render HTML interface
   res.writeHead(200, { 'Content-Type': 'text/html; charset=utf-8' });
 
-  const jobCards = jobs.map(j => `
-    <div style="background:#1e293b; padding:15px; border-radius:8px; margin-bottom:12px; border:1px solid #334155; position:relative;">
-      <button onclick="deleteJob(${j.id})" style="position:absolute; top:12px; right:12px; background:#ef4444; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:12px;">Delete</button>
-      <h3 style="margin:0 0 5px 0; color:#38bdf8; font-size:16px;">${j.title}</h3>
-      <p style="margin:0 0 8px 0; color:#94a3b8; font-size:13px;">${j.company} &bull; ${j.location || 'Remote'}</p>
-      <div style="margin-bottom:10px;"><span style="background:#0284c7; color:#fff; font-size:11px; padding:2px 6px; border-radius:4px;">90% ATS Match</span></div>
-      <p style="margin:0 0 10px 0; font-weight:bold; color:#f1f5f9; font-size:14px;">💰 ${j.salary || '$80,000/yr'}</p>
-      <button style="width:100%; background:#2563eb; color:#fff; border:none; padding:8px; border-radius:6px; font-weight:bold; cursor:pointer;">Quick Apply</button>
-    </div>
-  `).join('');
-
   const appCards = applications.map(a => `
     <div style="background:#1e293b; padding:12px; border-radius:8px; margin-bottom:10px; border:1px solid #334155;">
       <h4 style="margin:0 0 4px 0; color:#f8fafc; font-size:14px;">${a.name} <span style="background:#16a34a; color:#fff; font-size:10px; padding:2px 5px; border-radius:4px;">${a.score || '90%'}</span></h4>
@@ -92,6 +81,9 @@ const server = http.createServer((req, res) => {
         .section-title { font-size: 16px; color: #38bdf8; margin-top: 0; margin-bottom: 12px; }
         input { width: 100%; padding: 10px; margin-bottom: 10px; background: #1e293b; border: 1px solid #334155; color: #fff; border-radius: 6px; box-sizing: border-box; }
         button.submit-btn { width: 100%; background: #16a34a; color: #fff; border: none; padding: 10px; border-radius: 6px; font-weight: bold; cursor: pointer; }
+        .search-box { position: relative; margin-bottom: 15px; }
+        .search-box input { padding-left: 35px; border-color: #38bdf8; }
+        .search-icon { position: absolute; left: 10px; top: 10px; color: #94a3b8; font-size: 14px; }
       </style>
     </head>
     <body>
@@ -101,7 +93,13 @@ const server = http.createServer((req, res) => {
 
         <div class="card">
           <h2 class="section-title">Available Job Board</h2>
-          <div id="jobList">${jobCards}</div>
+          
+          <div class="search-box">
+            <span class="search-icon">🔍</span>
+            <input type="text" id="searchInput" placeholder="Search jobs by title, company, or location..." onkeyup="filterJobs()">
+          </div>
+
+          <div id="jobList"></div>
         </div>
 
         <div class="card">
@@ -121,6 +119,39 @@ const server = http.createServer((req, res) => {
       </div>
 
       <script>
+        const allJobs = ${JSON.stringify(jobs)};
+
+        function renderJobs(jobsToDisplay) {
+          const jobContainer = document.getElementById('jobList');
+          if (jobsToDisplay.length === 0) {
+            jobContainer.innerHTML = '<p style="color:#94a3b8; text-align:center; padding:10px;">No jobs matching your search.</p>';
+            return;
+          }
+          jobContainer.innerHTML = jobsToDisplay.map(j => \`
+            <div style="background:#1e293b; padding:15px; border-radius:8px; margin-bottom:12px; border:1px solid #334155; position:relative;">
+              <button onclick="deleteJob(\${j.id})" style="position:absolute; top:12px; right:12px; background:#ef4444; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:12px;">Delete</button>
+              <h3 style="margin:0 0 5px 0; color:#38bdf8; font-size:16px;">\${j.title}</h3>
+              <p style="margin:0 0 8px 0; color:#94a3b8; font-size:13px;">\${j.company} &bull; \${j.location || 'Remote'}</p>
+              <div style="margin-bottom:10px;"><span style="background:#0284c7; color:#fff; font-size:11px; padding:2px 6px; border-radius:4px;">90% ATS Match</span></div>
+              <p style="margin:0 0 10px 0; font-weight:bold; color:#f1f5f9; font-size:14px;">💰 \${j.salary || '$80,000/yr'}</p>
+              <button style="width:100%; background:#2563eb; color:#fff; border:none; padding:8px; border-radius:6px; font-weight:bold; cursor:pointer;">Quick Apply</button>
+            </div>
+          \`).join('');
+        }
+
+        function filterJobs() {
+          const query = document.getElementById('searchInput').value.toLowerCase();
+          const filtered = allJobs.filter(j => 
+            j.title.toLowerCase().includes(query) ||
+            j.company.toLowerCase().includes(query) ||
+            (j.location && j.location.toLowerCase().includes(query))
+          );
+          renderJobs(filtered);
+        }
+
+        // Initial Render
+        renderJobs(allJobs);
+
         document.getElementById('jobForm').addEventListener('submit', async (e) => {
           e.preventDefault();
           const title = document.getElementById('title').value;
