@@ -340,16 +340,23 @@ const server = http.createServer((req, res) => {
           const savedUser = JSON.parse(localStorage.getItem('talentPulseUser') || '{}');
           const isAdmin = savedUser.role === 'admin';
 
-          jobContainer.innerHTML = jobsToDisplay.map(j => \`
-            <div style="background:#1e293b; padding:15px; border-radius:8px; margin-bottom:12px; border:1px solid #334155; position:relative;">
-              \${isAdmin ? \\\`<button onclick="deleteJob(\\\${j.id})" style="position:absolute; top:12px; right:12px; background:#ef4444; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:12px;">Delete</button>\\\` : ''}
-              <h3 style="margin:0 0 5px 0; color:#38bdf8; font-size:16px;">\${j.title}</h3>
-              <p style="margin:0 0 8px 0; color:#94a3b8; font-size:13px;">\${j.company} &bull; \${j.location || 'Remote'}</p>
-              <div style="margin-bottom:10px;"><span style="background:#0284c7; color:#fff; font-size:11px; padding:2px 6px; border-radius:4px;">90% ATS Match</span></div>
-              <p style="margin:0 0 10px 0; font-weight:bold; color:#f1f5f9; font-size:14px;">💰 \${j.salary || '$80,000/yr'}</p>
-              <button onclick="openApplyModal('\${j.title}', '\${j.company}')" style="width:100%; background:#2563eb; color:#fff; border:none; padding:8px; border-radius:6px; font-weight:bold; cursor:pointer;">Quick Apply</button>
-            </div>
-          \`).join('');
+          let htmlContent = '';
+          for (let i = 0; i < jobsToDisplay.length; i++) {
+            let j = jobsToDisplay[i];
+            let deleteBtn = isAdmin ? '<button onclick="deleteJob(' + j.id + ')" style="position:absolute; top:12px; right:12px; background:#ef4444; color:#fff; border:none; padding:4px 8px; border-radius:4px; cursor:pointer; font-size:12px;">Delete</button>' : '';
+            let locationText = j.location || 'Remote';
+            let salaryText = j.salary || '$80,000/yr';
+
+            htmlContent += '<div style="background:#1e293b; padding:15px; border-radius:8px; margin-bottom:12px; border:1px solid #334155; position:relative;">' +
+              deleteBtn +
+              '<h3 style="margin:0 0 5px 0; color:#38bdf8; font-size:16px;">' + j.title + '</h3>' +
+              '<p style="margin:0 0 8px 0; color:#94a3b8; font-size:13px;">' + j.company + ' &bull; ' + locationText + '</p>' +
+              '<div style="margin-bottom:10px;"><span style="background:#0284c7; color:#fff; font-size:11px; padding:2px 6px; border-radius:4px;">90% ATS Match</span></div>' +
+              '<p style="margin:0 0 10px 0; font-weight:bold; color:#f1f5f9; font-size:14px;">💰 ' + salaryText + '</p>' +
+              '<button onclick="openApplyModal(\'' + j.title + '\', \'' + j.company + '\')" style="width:100%; background:#2563eb; color:#fff; border:none; padding:8px; border-radius:6px; font-weight:bold; cursor:pointer;">Quick Apply</button>' +
+              '</div>';
+          }
+          jobContainer.innerHTML = htmlContent;
         }
 
         function filterJobs() {
@@ -386,11 +393,4 @@ const server = http.createServer((req, res) => {
             const company = document.getElementById('company').value;
             const salary = document.getElementById('salary').value;
             
-            const res = await fetch('/api/jobs', {
-              method: 'POST',
-              headers: { 'Content-Type': 'application/json' },
-              body: JSON.stringify({ title, company, salary })
-            });
-
-            if (res.ok) {
-              window.location.href = window.location.pathname + '?t=' + Date.now();
+            const res = await fetch('/
