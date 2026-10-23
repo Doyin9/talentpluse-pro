@@ -79,6 +79,9 @@ app.get('/', (req, res) => {
       <button type="submit" class="submit-btn">Login</button>
       <p id="loginError" style="color: #ef4444; font-size: 12px; display: none; text-align: center; margin-top: 10px;"></p>
     </form>
+<div id="dashboardView" style="display: none;">
+  <!-- Your job listings and search bar go here -->
+</div>
 
     <!-- Signup Form -->
     <form id="signupForm" style="display: none;" onsubmit="handleSignup(event)">
