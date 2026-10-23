@@ -84,7 +84,7 @@ app.get('/', (req, res) => {
 </div>
 
     <!-- Signup Form -->
-    <form id="signupForm" style="display: none;" onsubmit="handleSignup(event)">
+    
   <!-- Signup Form -->
 <form id="signupForm" style="display: none;" onsubmit="handleSignup(event)">
   <input type="text" id="signupSurname" placeholder="Surname" required>
