@@ -97,9 +97,7 @@ app.get('/', (req, res) => {
   <p id="signupError" style="color: #ef4444; font-size: 14px; display: none;"></p>
 </form>
 
-      <button type="submit" class="submit-btn">Create Account</button>
-      <p id="signupError" style="color: #ef4444; font-size: 12px; display: none; text-align: center; margin-top: 10px;"></p>
-    </form>
+      
   </div>
 
   <script>
