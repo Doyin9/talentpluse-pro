@@ -136,31 +136,38 @@ app.get('/', (req, res) => {
       }
     }
 
-    async function handleSignup(e) {
-      e.preventDefault();
-      const firstName = document.getElementById('signupFirstName').value;
-      const middleName = document.getElementById('signupMiddleName').value;
-      const username = document.getElementById('signupUsername').value;
-      const email = document.getElementById('signupEmail').value;
-      const password = document.getElementById('signupPassword').value;
+    async function handleSignup(event) {
+  event.preventDefault();
+  const signupError = document.getElementById('signupError');
+  signupError.style.display = 'none';
 
-      const res = await fetch('/api/signup', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ firstName, middleName, username, email, password })
-      });
+  const surname = document.getElementById('signupSurname').value;
+  const firstName = document.getElementById('signupFirstName').value;
+  const lastName = document.getElementById('signupLastName').value;
+  const username = document.getElementById('signupUsername').value;
+  const email = document.getElementById('signupEmail').value;
+  const password = document.getElementById('signupPassword').value;
 
-      const data = await res.json();
-
-      if (data.success) {
-        alert('Account created successfully! Please login.');
-        switchAuthTab('login');
-      } else {
-        const errEl = document.getElementById('signupError');
-        errEl.innerText = data.message || 'Signup failed';
-        errEl.style.display = 'block';
-      }
+  try {
+    const res = await fetch('/api/signup', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ surname, firstName, lastName, username, email, password })
+    });
+    const data = await res.json();
+    if (data.success) {
+      alert('Account created successfully!');
+      window.location.reload();
+    } else {
+      signupError.textContent = data.message || 'Signup failed';
+      signupError.style.display = 'block';
     }
+  } catch (err) {
+    signupError.textContent = 'Server error. Please try again.';
+    signupError.style.display = 'block';
+  }
+}
+
   </script>
 </body>
 </html>`);
