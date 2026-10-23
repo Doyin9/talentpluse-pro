@@ -1,4 +1,4 @@
- import fs from 'fs';
+import fs from 'fs';
 import express from 'express';
 
 const app = express();
@@ -83,6 +83,7 @@ app.get('/', (req, res) => {
     <!-- Signup Form -->
     <form id="signupForm" style="display: none;" onsubmit="handleSignup(event)">
       <input type="text" id="signupFirstName" placeholder="First Name" required>
+      <input type="text" id="signupFirstName" placeholder="First Name" required>
       <input type="text" id="signupMiddleName" placeholder="Middle Name (Optional)">
       <input type="text" id="signupUsername" placeholder="Username" required>
       <input type="email" id="signupEmail" placeholder="Email Address" required>
@@ -165,5 +166,4 @@ app.get('/', (req, res) => {
 });
 
 const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => console.log(\`Server running on port \${PORT}\`));
-                                              
+app.listen(PORT, () => console.log('Server running on port ' + PORT));
