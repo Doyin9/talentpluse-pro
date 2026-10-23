@@ -127,9 +127,35 @@ app.get('/', (req, res) => {
 
       const data = await res.json();
 
-      if (data.success) {
-        alert('Login successful!');
-      } else {
+      async function handleLogin(e) {
+  e.preventDefault();
+  const username = document.getElementById('loginUsername').value;
+  const password = document.getElementById('loginPassword').value;
+
+  const res = await fetch('/api/login', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ username, password })
+  });
+
+  const data = await res.json();
+
+  if (data.success) {
+    // Hide the login/signup card and display your existing main app/dashboard view
+    document.querySelector('.card').style.display = 'none';
+    
+    // If your main section container ID is 'dashboardView' or 'appView', show it here:
+    const mainApp = document.getElementById('dashboardView') || document.getElementById('appView');
+    if (mainApp) {
+      mainApp.style.display = 'block';
+    }
+  } else {
+    const errEl = document.getElementById('loginError');
+    errEl.innerText = data.message || 'Login failed';
+    errEl.style.display = 'block';
+  }
+}
+} else {
         const errEl = document.getElementById('loginError');
         errEl.innerText = data.message || 'Login failed';
         errEl.style.display = 'block';
