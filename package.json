@@ -4,10 +4,10 @@
   "type": "module",
   "main": "server.mjs",
   "dependencies": {
-  "express": "^4.19.2",
-  "express-session": "^1.18.1",
-  "bcryptjs": "^2.4.3"
-  }
+    "express": "^4.19.2",
+    "express-session": "^1.18.1",
+    "bcryptjs": "^2.4.3"
+  },
   "scripts": {
     "start": "node server.mjs"
   }
