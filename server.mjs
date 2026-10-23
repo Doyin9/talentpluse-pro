@@ -82,12 +82,13 @@ app.get('/', (req, res) => {
 
     <!-- Signup Form -->
     <form id="signupForm" style="display: none;" onsubmit="handleSignup(event)">
-      <input type="text" id="signupFirstName" placeholder="First Name" required>
-      <input type="text" id="signupFirstName" placeholder="First Name" required>
-      <input type="text" id="signupMiddleName" placeholder="Middle Name (Optional)">
-      <input type="text" id="signupUsername" placeholder="Username" required>
-      <input type="email" id="signupEmail" placeholder="Email Address" required>
-      <input type="password" id="signupPassword" placeholder="Password" required>
+  <input type="text" id="lastName" placeholder="Surname (Last Name)" required />
+<input type="text" id="firstName" placeholder="First Name" required />
+<input type="text" id="middleName" placeholder="Middle Name (Optional)" />
+<input type="text" id="username" placeholder="Username" required />
+<input type="email" id="email" placeholder="Email Address" required />
+<input type="password" id="password" placeholder="Password" required />
+
       <button type="submit" class="submit-btn">Create Account</button>
       <p id="signupError" style="color: #ef4444; font-size: 12px; display: none; text-align: center; margin-top: 10px;"></p>
     </form>
