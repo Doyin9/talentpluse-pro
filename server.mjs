@@ -133,24 +133,25 @@ app.post('/api/signup', async (req, res) => {
 
 app.post('/api/login', async (req, res) => {
   try {
-    const username = clean(req.body.username);
+    const email = clean(req.body.email).toLowerCase();
     const password = req.body.password;
 
-    if (!username || typeof password !== 'string' || !password) {
+    if (!email || typeof password !== 'string' || !password) {
       return res.status(400).json({
-        message: 'Enter your username and password.'
+        message: 'Enter your email address and password.'
       });
     }
 
     const users = await getUsers();
 
     const user = users.find(u =>
-      u.username.toLowerCase() === username.toLowerCase()
+      typeof u.email === 'string' &&
+      u.email.toLowerCase() === email
     );
 
     if (!user || !await bcrypt.compare(password, user.passwordHash)) {
       return res.status(401).json({
-        message: 'Incorrect username or password.'
+        message: 'Incorrect email or password.'
       });
     }
 
@@ -164,6 +165,7 @@ app.post('/api/login', async (req, res) => {
       req.session.user = {
         id: user.id,
         username: user.username,
+        email: user.email,
         firstName: user.firstName,
         surname: user.surname
       };
@@ -305,14 +307,14 @@ label{font-size:14px;font-weight:bold}
     <button id="signupTab" type="button">Sign Up</button>
   </div>
 
-  <form id="loginForm">
+ <form id="loginForm">
     <h2>Welcome Back</h2>
-    <label>Username</label>
-    <input name="username" required autocomplete="username">
+    <label>Email Address</label>
+    <input name="email" type="email" required autocomplete="email">
     <label>Password</label>
     <input name="password" type="password" required autocomplete="current-password">
     <button type="submit">Login</button>
-  </form>
+</form>
 
   <form id="signupForm" class="hidden">
     <h2>Create Your Account</h2>
