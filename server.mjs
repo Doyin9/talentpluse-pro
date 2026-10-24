@@ -523,10 +523,11 @@ async function loadJobs(filters = {}) {
     const button = document.createElement('button');
     button.type = 'button';
     button.textContent = 'Apply for this Job';
-    button.addEventListener('click', () => {
-      $('applicantForm').elements.jobTitle.value = job.title;
-      $('applicantForm').scrollIntoView({ behavior: 'smooth' });
-    });
+button.addEventListener('click', () => {
+  $('applicationSection').classList.remove('hidden');
+  $('applicantForm').elements.jobTitle.value = job.title;
+  $('applicationSection').scrollIntoView({ behavior: 'smooth' });
+});
 
     card.append(title, company, description, button);
     list.append(card);
@@ -558,10 +559,8 @@ $('applicantForm').addEventListener('submit', async event => {
     showMessage('applicantMessage', error.message);
   }
 });
-$('applyForJobBtn').addEventListener('click', () => {
-  $('applicationSection').classList.remove('hidden');
-  $('applicationSection').scrollIntoView({ behavior: 'smooth' });
-});
+
+
 $('logoutBtn').addEventListener('click', async () => {
   try {
     await api('/api/logout', { method: 'POST', body: '{}' });
