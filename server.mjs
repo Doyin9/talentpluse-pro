@@ -1,6 +1,8 @@
 import express from 'express';
 import session from 'express-session';
 import bcrypt from 'bcryptjs';
+import pg from 'pg';
+const { Pool } = pg;
 import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
@@ -10,7 +12,10 @@ const PORT = process.env.PORT || 3000;
 app.set('trust proxy', 1);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const USERS_FILE = path.join(__dirname, 'users.json');
-
+const pool = new Pool({
+  connectionString: process.env.DATABASE_URL,
+  ssl: { rejectUnauthorized: false }
+});
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -26,18 +31,51 @@ app.use(session({
   }
 }));
 
+async function initDB() {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS users (
+      id TEXT PRIMARY KEY,
+      surname TEXT NOT NULL,
+      "firstName" TEXT NOT NULL,
+      "lastName" TEXT NOT NULL,
+      username TEXT NOT NULL,
+      email TEXT UNIQUE NOT NULL,
+      "passwordHash" TEXT NOT NULL
+    )
+  `);
+}
+
 async function getUsers() {
-  try {
-    return JSON.parse(await fs.readFile(USERS_FILE, 'utf8'));
-  } catch {
-    return [];
-  }
+  const result = await pool.query('SELECT * FROM users');
+  return result.rows;
 }
 
 async function saveUsers(users) {
-  await fs.writeFile(USERS_FILE, JSON.stringify(users, null, 2));
+  for (const user of users) {
+    await pool.query(`
+      INSERT INTO users (
+        id, surname, "firstName", "lastName",
+        username, email, "passwordHash"
+      )
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+      ON CONFLICT (id) DO UPDATE SET
+        surname = EXCLUDED.surname,
+        "firstName" = EXCLUDED."firstName",
+        "lastName" = EXCLUDED."lastName",
+        username = EXCLUDED.username,
+        email = EXCLUDED.email,
+        "passwordHash" = EXCLUDED."passwordHash"
+    `, [
+      user.id,
+      user.surname,
+      user.firstName,
+      user.lastName,
+      user.username,
+      user.email,
+      user.passwordHash
+    ]);
+  }
 }
-
 function clean(value) {
   return typeof value === 'string' ? value.trim() : '';
 }
@@ -546,6 +584,13 @@ $('logoutBtn').addEventListener('click', async () => {
 </body>
 </html>`;
 
-app.listen(PORT, () => {
-  console.log('TalentPulse PRO running on port ' + PORT);
-});
+initDB()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log('TalentPulse PRO running on port ' + PORT);
+    });
+  })
+  .catch(error => {
+    console.error('Database initialization failed:', error);
+    process.exit(1);
+  });
