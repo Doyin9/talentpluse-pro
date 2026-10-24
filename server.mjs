@@ -401,8 +401,7 @@ label{font-size:14px;font-weight:bold}
     <div id="jobsList"></div>
   </div>
 
-  <div class="card">
-    <h2>Applicant Registration</h2>
+  <div class="card hidden" id="applicationSection">
     <form id="applicantForm">
       <label>Full Name</label><input name="fullName" required>
       <label>Phone Number</label><input name="phone" type="tel" required>
@@ -559,7 +558,10 @@ $('applicantForm').addEventListener('submit', async event => {
     showMessage('applicantMessage', error.message);
   }
 });
-
+$('applyForJobBtn').addEventListener('click', () => {
+  $('applicationSection').classList.remove('hidden');
+  $('applicationSection').scrollIntoView({ behavior: 'smooth' });
+});
 $('logoutBtn').addEventListener('click', async () => {
   try {
     await api('/api/logout', { method: 'POST', body: '{}' });
