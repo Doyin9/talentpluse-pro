@@ -340,12 +340,11 @@ label{font-size:14px;font-weight:bold}
 
 <main>
 <section id="authView" class="card">
-  <div class="tabs">
-    <button id="loginTab" class="active" type="button">Login</button>
-    <button id="signupTab" type="button">Sign Up</button>
-  </div>
-
- <form id="loginForm">
+  <div class="tabs hidden">
+  <button id="loginTab" type="button">Login</button>
+  <button id="signupTab" type="button">Sign Up</button>
+</div>
+ <form id="loginForm" class="hidden">
     <h2>Welcome Back</h2>
     <label>Email Address</label>
     <input name="email" type="email" required autocomplete="email">
@@ -354,7 +353,7 @@ label{font-size:14px;font-weight:bold}
     <button type="submit">Login</button>
 </form>
 
-  <form id="signupForm" class="hidden">
+  <form id="signupForm">
     <h2>Create Your Account</h2>
     <div class="row">
       <div><label>Surname</label><input name="surname" required autocomplete="family-name"></div>
@@ -463,10 +462,9 @@ $('signupForm').addEventListener('submit', async event => {
       method: 'POST',
       body: JSON.stringify(data)
     });
-    showMessage('authMessage', result.message);
     event.currentTarget.reset();
-    showAuth('login');
-    showMessage('authMessage', result.message);
+showAuth('login');
+showMessage('authMessage', result.message);
   } catch (error) {
     showMessage('authMessage', error.message);
   }
