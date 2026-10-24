@@ -370,6 +370,7 @@ label{font-size:14px;font-weight:bold}
     <label>Confirm Password</label>
     <input name="confirmPassword" type="password" minlength="8" required autocomplete="new-password">
     <button type="submit">Create Account</button>
+    <button type="button" id="existingLoginBtn" style="background:none;border:none;color:#4f46e5;font-size:12px;padding:5px;cursor:pointer;">Already registered? Login</button>
   </form>
   <p id="authMessage" class="notice hidden" role="status"></p>
 </section>
@@ -433,7 +434,9 @@ function showAuth(mode) {
   $('signupTab').classList.toggle('active', signup);
   $('authMessage').classList.add('hidden');
 }
-
+$('existingLoginBtn').addEventListener('click', () => {
+  showAuth('login');
+});
 $('loginTab').addEventListener('click', () => showAuth('login'));
 $('signupTab').addEventListener('click', () => showAuth('signup'));
 
