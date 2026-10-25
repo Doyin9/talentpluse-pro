@@ -50,6 +50,18 @@ async function initDB() {
       "passwordHash" TEXT NOT NULL
     )
   `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS applications (
+      id SERIAL PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      full_name TEXT NOT NULL,
+      phone TEXT NOT NULL,
+      education TEXT NOT NULL,
+      job_title TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
 }
 
 async function getUsers() {
@@ -302,21 +314,47 @@ app.get('/api/jobs', requireLogin, (req, res) => {
   res.json({ jobs: filtered });
 });
 
-app.post('/api/applicants', requireLogin, (req, res) => {
-  const fullName = clean(req.body.fullName);
-  const phone = clean(req.body.phone);
-  const education = clean(req.body.education);
-  const jobTitle = clean(req.body.jobTitle);
+app.post('/api/applicants', requireLogin, async (req, res) => {
+  try {
+    const fullName = clean(req.body.fullName);
+    const phone = clean(req.body.phone);
+    const education = clean(req.body.education);
+    const jobTitle = clean(req.body.jobTitle);
 
-  if (!fullName || !phone || !education || !jobTitle) {
-    return res.status(400).json({
-      message: 'Please complete every applicant field.'
+    if (!fullName || !phone || !education || !jobTitle) {
+      return res.status(400).json({
+        message: 'Please complete every applicant field.'
+      });
+    }
+
+    await pool.query(`
+      INSERT INTO applications (user_id, full_name, phone, education, job_title)
+      VALUES ($1, $2, $3, $4, $5)
+    `, [req.session.user.id, fullName, phone, education, jobTitle]);
+
+    res.status(201).json({
+      message: 'Your application has been submitted successfully!'
+    });
+  } catch (error) {
+    console.error('Application submission error:', error);
+    res.status(500).json({
+      message: 'Could not submit your application. Please try again.'
     });
   }
+});
 
-  res.status(201).json({
-    message: 'Your applicant form has been received.'
-  });
+app.get('/api/applications', requireLogin, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT * FROM applications WHERE user_id = $1 ORDER BY id DESC
+    `, [req.session.user.id]);
+    res.json({ applications: result.rows });
+  } catch (error) {
+    console.error('Fetch applications error:', error);
+    res.status(500).json({
+      message: 'Could not fetch your applications.'
+    });
+  }
 });
 
 const page = `<!DOCTYPE html>
@@ -413,42 +451,52 @@ label{font-size:14px;font-weight:bold}
     <p style="color: #4a5568; margin-top: 6px; font-size: 15px;">A place to grow skills, elevate talent, and build your future.</p>
   </div>
 
-  <div class="card">
-    <h2>Find Jobs</h2>
-    <form id="jobSearchForm">
-      <label>Job title or keyword</label>
-      <input name="search" placeholder="e.g. developer">
-      <label>Location</label>
-      <input name="location" placeholder="e.g. Lagos or Remote">
-      <label>Job type</label>
-      <select name="type">
-        <option value="">All types</option>
-        <option>Full-time</option>
-        <option>Part-time</option>
-        <option>Remote</option>
-      </select>
-      <button type="submit">Search Jobs</button>
-    </form>
+  <div id="mainDashboardContent">
+    <div class="card">
+      <h2>Find Jobs</h2>
+      <form id="jobSearchForm">
+        <label>Job title or keyword</label>
+        <input name="search" placeholder="e.g. developer">
+        <label>Location</label>
+        <input name="location" placeholder="e.g. Lagos or Remote">
+        <label>Job type</label>
+        <select name="type">
+          <option value="">All types</option>
+          <option>Full-time</option>
+          <option>Part-time</option>
+          <option>Remote</option>
+        </select>
+        <button type="submit">Search Jobs</button>
+      </form>
+    </div>
+
+    <div class="card">
+      <h2 id="jobCountHeader">Job Listings</h2>
+      <div id="jobsList"></div>
+    </div>
+
+    <div class="card hidden" id="applicationSection">
+      <h2>Job Application</h2>
+      <div id="selectedJobOverview" class="job-details-box"></div>
+
+      <form id="applicantForm">
+        <label>Full Name</label><input name="fullName" required>
+        <label>Phone Number</label><input name="phone" type="tel" required>
+        <label>Highest Education</label>
+        <input name="education" required placeholder="e.g. B.Sc. or OND">
+        <label>Job Title Applying For</label><input name="jobTitle" id="applicantJobTitleInput" required readonly style="background:#f1f5f9;">
+        <button type="submit">Submit Application Details</button>
+      </form>
+      <p id="applicantMessage" class="notice hidden" role="status"></p>
+    </div>
   </div>
 
-  <div class="card">
-    <h2 id="jobCountHeader">Job Listings</h2>
-    <div id="jobsList"></div>
-  </div>
-
-  <div class="card hidden" id="applicationSection">
-    <h2>Job Application</h2>
-    <div id="selectedJobOverview" class="job-details-box"></div>
-
-    <form id="applicantForm">
-      <label>Full Name</label><input name="fullName" required>
-      <label>Phone Number</label><input name="phone" type="tel" required>
-      <label>Highest Education</label>
-      <input name="education" required placeholder="e.g. B.Sc. or OND">
-      <label>Job Title Applying For</label><input name="jobTitle" id="applicantJobTitleInput" required readonly style="background:#f1f5f9;">
-      <button type="submit">Submit Application Details</button>
-    </form>
-    <p id="applicantMessage" class="notice hidden" role="status"></p>
+  <div class="card hidden" id="myApplicationsView">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+      <h2>My Submitted Applications</h2>
+      <button type="button" id="backToDashboardBtn" style="background:#64748b;">Back to Jobs</button>
+    </div>
+    <div id="myApplicationsList"></div>
   </div>
 </section>
 </main>
@@ -609,19 +657,55 @@ $('applicantForm').addEventListener('submit', async event => {
       body: JSON.stringify(data)
     });
     showMessage('applicantMessage', result.message);
+    event.currentTarget.reset();
   } catch (error) {
     showMessage('applicantMessage', error.message);
   }
 });
 
-$('menuMyApplications').addEventListener('click', () => alert('My Applications feature coming soon!'));
+$('menuMyApplications').addEventListener('click', async () => {
+  $('mainDashboardContent').classList.add('hidden');
+  $('myApplicationsView').classList.remove('hidden');
+
+  try {
+    const result = await api('/api/applications');
+    const container = $('myApplicationsList');
+    container.replaceChildren();
+
+    if (!result.applications.length) {
+      container.textContent = 'You have not submitted any applications yet.';
+      return;
+    }
+
+    result.applications.forEach(app => {
+      const box = document.createElement('div');
+      box.className = 'job';
+      box.innerHTML = `
+        <h3>${app.job_title}</h3>
+        <p><strong>Applicant Name:</strong> ${app.full_name}</p>
+        <p><strong>Phone:</strong> ${app.phone}</p>
+        <p><strong>Education:</strong> ${app.education}</p>
+        <p style="color:#64748b; font-size:13px;">Submitted on: ${new Date(app.created_at).toLocaleString()}</p>
+      `;
+      container.append(box);
+    });
+  } catch (error) {
+    alert(error.message);
+  }
+});
+
+$('backToDashboardBtn').addEventListener('click', () => {
+  $('myApplicationsView').classList.add('hidden');
+  $('mainDashboardContent').classList.remove('hidden');
+});
+
 $('menuSavedJobs').addEventListener('click', () => alert('Saved Jobs feature coming soon!'));
 $('menuProfile').addEventListener('click', () => alert('Profile Settings feature coming soon!'));
 $('menuPassword').addEventListener('click', () => alert('Change Password feature coming soon!'));
 
 $('logoutBtn').addEventListener('click', async () => {
   try {
-       await api('/api/logout', { method: 'POST', body: '{}' });
+    await api('/api/logout', { method: 'POST', body: '{}' });
     currentUser = null;
     $('dashboardView').classList.add('hidden');
     $('authView').classList.remove('hidden');
