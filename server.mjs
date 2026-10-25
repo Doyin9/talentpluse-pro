@@ -322,7 +322,7 @@ const page = `<!DOCTYPE html>
 body{margin:0;font-family:Arial,sans-serif;background:#f2f5fb;color:#18243b}
 header{background:#10284b;color:white;padding:20px;text-align:center}
 main{max-width:900px;margin:25px auto;padding:18px}
-.card{background:white;padding:24px;border-radius:14px;box-shadow:0 4px 18px #0001;margin-bottom:20px}
+.card{background:white;padding:24px;border-radius:14px;box-shadow:0 4px 18px #0001;margin-bottom:20px;position:relative}
 .tabs{display:flex;gap:10px;margin-bottom:20px}
 button{cursor:pointer;border:0;border-radius:7px;padding:12px 17px;background:#185adb;color:white}
 .tabs button{flex:1;background:#e5ebf6;color:#10284b}
@@ -334,6 +334,15 @@ label{font-size:14px;font-weight:bold}
 .notice{margin:12px 0;padding:12px;border-radius:7px;background:#edf4ff}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .job-details-box{background:#f8fafc;padding:15px;border-left:4px solid #185adb;border-radius:6px;margin-bottom:15px}
+
+/* Hamburger Menu Styling */
+.menu-container{position:absolute;top:20px;left:20px}
+.menu-btn{background:none;border:none;font-size:24px;cursor:pointer;color:#10284b;padding:0;line-height:1}
+.dropdown-menu{position:absolute;top:35px;left:0;background:white;box-shadow:0 4px 15px rgba(0,0,0,0.15);border-radius:8px;width:200px;z-index:100;overflow:hidden}
+.dropdown-menu button{width:100%;text-align:left;background:none;color:#18243b;padding:12px 16px;border-radius:0;border-bottom:1px solid #f1f5f9}
+.dropdown-menu button:hover{background:#f8fafc}
+.dropdown-menu button.logout-item{color:#dc2626;font-weight:bold}
+
 @media(max-width:600px){.row{grid-template-columns:1fr}}
 </style>
 </head>
@@ -381,11 +390,23 @@ label{font-size:14px;font-weight:bold}
 </section>
 
 <section id="dashboardView" class="hidden">
-  <div class="card">
+  <div class="card" style="padding-top:50px;">
+    <!-- Hamburger Menu Button & Dropdown -->
+    <div class="menu-container">
+      <button id="menuBtn" class="menu-btn" type="button" aria-label="Menu">☰</button>
+      <div id="dropdownMenu" class="dropdown-menu hidden">
+        <button type="button" id="menuMyApplications">My Applications</button>
+        <button type="button" id="menuSavedJobs">Saved Jobs</button>
+        <button type="button" id="menuProfile">Profile Settings</button>
+        <button type="button" id="menuPassword">Change Password</button>
+        <button type="button" id="logoutBtn" class="logout-item">Logout</button>
+      </div>
+    </div>
+
     <h2 id="welcome"></h2>
     <p style="color: #4a5568; margin-top: 6px; font-size: 15px;">A place to grow skills, elevate talent, and build your future.</p>
   </div>
-  
+
   <div class="card">
     <h2>Find Jobs</h2>
     <form id="jobSearchForm">
@@ -444,11 +465,22 @@ function showAuth(mode) {
   $('signupTab').classList.toggle('active', signup);
   $('authMessage').classList.add('hidden');
 }
+
 $('existingLoginBtn').addEventListener('click', () => {
   showAuth('login');
 });
 $('loginTab').addEventListener('click', () => showAuth('login'));
 $('signupTab').addEventListener('click', () => showAuth('signup'));
+
+// Toggle Hamburger Menu
+$('menuBtn').addEventListener('click', (e) => {
+  e.stopPropagation();
+  $('dropdownMenu').classList.toggle('hidden');
+});
+
+document.addEventListener('click', () => {
+  $('dropdownMenu').classList.add('hidden');
+});
 
 async function api(url, options = {}) {
   const response = await fetch(url, {
@@ -577,26 +609,15 @@ $('applicantForm').addEventListener('submit', async event => {
   }
 });
 
-(async () => {
-  try {
-    await loadDashboard();
-  } catch {
-    $('authView').classList.remove('hidden');
-    $('dashboardView').classList.add('hidden');
-  }
-})();
-</script>
-</body>
-</html>`;
+// Menu Action Placeholders
+$('menuMyApplications').addEventListener('click', () => alert('My Applications feature coming soon!'));
+$('menuSavedJobs').addEventListener('click', () => alert('Saved Jobs feature coming soon!'));
+$('menuProfile').addEventListener('click', () => alert('Profile Settings feature coming soon!'));
+$('menuPassword').addEventListener('click', () => alert('Change Password feature coming soon!'));
 
-initDB()
-  .then(() => {
-    app.listen(PORT, () => {
-      console.log('TalentPulse PRO running on port ' + PORT);
-    });
-  })
-  .catch(error => {
-    console.error('Database initialization failed:', error);
-    process.exit(1);
-  });
-      
+// Logout Action
+$('logoutBtn').addEventListener('click', async () => {
+  try {
+    await api('/api/logout', { method: 'POST', body: '{}' });
+    currentUser = null;
+    $('dashboar
