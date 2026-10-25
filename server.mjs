@@ -279,7 +279,19 @@ const jobs = [
 ];
 
 app.get('/api/jobs', requireLogin, (req, res) => {
-  res.json({ jobs });
+  const search = clean(req.query.search).toLowerCase();
+  const location = clean(req.query.location).toLowerCase();
+  const type = clean(req.query.type).toLowerCase();
+
+  const filtered = jobs.filter(job =>
+    (!search ||
+      `${job.title} ${job.company} ${job.description}`
+        .toLowerCase().includes(search)) &&
+    (!location || job.location.toLowerCase().includes(location)) &&
+    (!type || job.type.toLowerCase() === type)
+  );
+
+  res.json({ jobs: filtered });
 });
 
 app.post('/api/applicants', requireLogin, (req, res) => {
@@ -371,6 +383,24 @@ label{font-size:14px;font-weight:bold}
 <section id="dashboardView" class="hidden">
   <div class="card">
     <h2 id="welcome"></h2>
+  </div>
+
+  <div class="card">
+    <h2>Find Jobs</h2>
+    <form id="jobSearchForm">
+      <label>Job title or keyword</label>
+      <input name="search" placeholder="e.g. developer">
+      <label>Location</label>
+      <input name="location" placeholder="e.g. Lagos or Remote">
+      <label>Job type</label>
+      <select name="type">
+        <option value="">All types</option>
+        <option>Full-time</option>
+        <option>Part-time</option>
+        <option>Remote</option>
+      </select>
+      <button type="submit">Search Jobs</button>
+    </form>
   </div>
 
   <div class="card">
@@ -476,15 +506,16 @@ async function loadDashboard() {
   await loadJobs();
 }
 
-async function loadJobs() {
-  const result = await api('/api/jobs');
+async function loadJobs(filters = {}) {
+  const params = new URLSearchParams(filters);
+  const result = await api('/api/jobs?' + params.toString());
   const list = $('jobsList');
   list.replaceChildren();
 
   $('jobCountHeader').textContent = 'Job Listings (' + result.jobs.length + ' Available)';
 
   if (!result.jobs.length) {
-    list.textContent = 'No jobs available right now.';
+    list.textContent = 'No jobs match your search.';
     return;
   }
 
@@ -518,6 +549,17 @@ async function loadJobs() {
     list.append(card);
   });
 }
+
+$('jobSearchForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  const filters = Object.fromEntries(new FormData(event.currentTarget).entries());
+
+  try {
+    await loadJobs(filters);
+  } catch (error) {
+    alert(error.message);
+  }
+});
 
 $('applicantForm').addEventListener('submit', async event => {
   event.preventDefault();
@@ -556,4 +598,4 @@ initDB()
     console.error('Database initialization failed:', error);
     process.exit(1);
   });
-  
+      
