@@ -95,9 +95,7 @@ function clean(value) {
 
 function requireLogin(req, res, next) {
   if (!req.session.user) {
-    return res.status(401).json({
-      message: 'Please log in first.'
-    });
+    return res.status(401).json({ message: 'Please log in first.' });
   }
   next();
 }
@@ -452,11 +450,11 @@ label{font-size:14px;font-weight:bold}
 
 <main>
 <section id="authView" class="card">
-  <div class="tabs hidden">
-    <button id="loginTab" type="button">Login</button>
+  <div class="tabs">
+    <button id="loginTab" type="button" class="active">Login</button>
     <button id="signupTab" type="button">Sign Up</button>
   </div>
-  <form id="loginForm" class="hidden">
+  <form id="loginForm">
     <h2>Welcome Back</h2>
     <label>Email Address</label>
     <input name="email" type="email" required autocomplete="email">
@@ -465,7 +463,7 @@ label{font-size:14px;font-weight:bold}
     <button type="submit">Login</button>
   </form>
 
-  <form id="signupForm">
+  <form id="signupForm" class="hidden">
     <h2>Create Your Account</h2>
     <div class="row">
       <div><label>Surname</label><input name="surname" required autocomplete="family-name"></div>
@@ -482,7 +480,6 @@ label{font-size:14px;font-weight:bold}
     <label>Confirm Password</label>
     <input name="confirmPassword" type="password" minlength="8" required autocomplete="new-password">
     <button type="submit">Create Account</button>
-    <button type="button" id="existingLoginBtn" style="background:none;border:none;color:#4f46e5;font-size:12px;padding:5px;cursor:pointer;">Already registered? Login</button>
   </form>
   <p id="authMessage" class="notice hidden" role="status"></p>
 </section>
@@ -643,7 +640,6 @@ function showAuth(mode) {
   $('authMessage').classList.add('hidden');
 }
 
-$('existingLoginBtn').addEventListener('click', () => showAuth('login'));
 $('loginTab').addEventListener('click', () => showAuth('login'));
 $('signupTab').addEventListener('click', () => showAuth('signup'));
 
@@ -666,14 +662,22 @@ async function api(url, options = {}) {
     }
   });
 
-  const data = await response.json();
+  const text = await response.text();
+  let data;
+  try {
+    data = JSON.parse(text);
+  } catch (e) {
+    throw new Error('Server starting up or returned invalid response. Please try again in a moment.');
+  }
+
   if (!response.ok) throw new Error(data.message || 'Request failed.');
   return data;
 }
 
 $('signupForm').addEventListener('submit', async event => {
   event.preventDefault();
-  const data = Object.fromEntries(new FormData(event.currentTarget).entries());
+  const form = new FormData(event.currentTarget);
+  const data = Object.fromEntries(form.entries());
 
   try {
     const result = await api('/api/signup', {
@@ -1025,8 +1029,9 @@ $('logoutBtn').addEventListener('click', async () => {
   try {
     await loadDashboard();
   } catch {
-    $('authView').classList.remove('hidden');
+    $('authView').classList.add('hidden');
     $('dashboardView').classList.add('hidden');
+    $('authView').classList.remove('hidden');
   }
 })();
 </script>
@@ -1043,3 +1048,4 @@ initDB()
     console.error('Database initialization failed:', error);
     process.exit(1);
   });
+  
