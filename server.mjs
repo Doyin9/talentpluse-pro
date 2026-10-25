@@ -7,10 +7,9 @@ import path from 'path';
 import { fileURLToPath } from 'url';
 
 const app = express();
-app.set('trust proxy', 1); // <-- ADD THIS LINE HERE
+app.set('trust proxy', 1);
 
 const PORT = process.env.PORT || 3000;
-app.set('trust proxy', 1);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
@@ -30,6 +29,12 @@ app.use(session({
     maxAge: 24 * 60 * 60 * 1000
   }
 }));
+
+function clean(val) {
+  if (!val) return '';
+  return String(val).trim();
+}
+
 app.get('/', (req, res) => {
   res.type('html').send(page);
 });
@@ -80,11 +85,6 @@ async function initDB() {
   `);
 }
 
-async function getUsers() {
-  const result = await pool.query('SELECT * FROM users');
-  return result.rows;
-}
-
 function requireLogin(req, res, next) {
   if (!req.session || !req.session.user || !req.session.user.id) {
     return res.status(401).json({ message: 'Please log in first.' });
@@ -92,58 +92,40 @@ function requireLogin(req, res, next) {
   next();
 }
 
-app.get('/api/me', async (req, res) => {
+app.post('/api/signup', async (req, res) => {
   try {
-    if (!req.session || !req.session.user || !req.session.user.id) {
-      return res.status(401).json({ message: 'Not logged in.' });
-    }
-    const result = await pool.query('SELECT id, surname, "firstName", "lastName", username, email, headline, bio, phone, location, avatar, verified FROM users WHERE id = $1', [req.session.user.id]);
-    if (!result.rows[0]) {
-      req.session.destroy(() => {});
-      return res.status(401).json({ message: 'Please log in again.' });
-    }
-    res.json({ user: result.rows[0] });
-  } catch (error) {
-    return res.status(401).json({ message: 'Please log in.' });
-  }
-});
-
-
-app.post('/api/login', async (req, res) => {
-  try {
-    const email = (req.body.email || '').trim().toLowerCase();
+    const surname = clean(req.body.surname);
+    const firstName = clean(req.body.firstName);
+    const lastName = clean(req.body.lastName);
+    const username = clean(req.body.username);
+    const email = clean(req.body.email).toLowerCase();
     const password = req.body.password;
 
-    if (!email || !password) {
-      return res.status(400).json({ message: 'Enter your email and password.' });
+    if (!surname || !firstName || !lastName || !username || !email || !password) {
+      return res.status(400).json({ message: 'All fields are required.' });
     }
 
-    const result = await pool.query('SELECT * FROM users WHERE LOWER(email) = $1', [email]);
-    const user = result.rows[0];
-
-    if (!user || !await bcrypt.compare(password, user.passwordHash)) {
-      return res.status(401).json({ message: 'Incorrect email or password.' });
+    if (password.length < 8) {
+      return res.status(400).json({ message: 'Password must be at least 8 characters long.' });
     }
 
-    req.session.user = {
-      id: user.id,
-      username: user.username,
-      email: user.email,
-      firstName: user.firstName,
-      surname: user.surname,
-      avatar: user.avatar || '',
-      verified: user.verified || false
-    };
+    const existing = await pool.query('SELECT id FROM users WHERE LOWER(email) = $1 OR LOWER(username) = $2', [email, username.toLowerCase()]);
+    if (existing.rows.length > 0) {
+      return res.status(409).json({ message: 'Email or username already exists.' });
+    }
 
-    req.session.save(err => {
-      if (err) {
-        return res.status(500).json({ message: 'Session save error.' });
-      }
-      res.json({ message: 'Login successful.' });
-    });
+    const id = 'user_' + Date.now() + Math.random().toString(36).substring(2, 7);
+    const passwordHash = await bcrypt.hash(password, 10);
+
+    await pool.query(`
+      INSERT INTO users (id, surname, "firstName", "lastName", username, email, "passwordHash")
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `, [id, surname, firstName, lastName, username, email, passwordHash]);
+
+    res.status(201).json({ message: 'Account created successfully! Please log in.' });
   } catch (error) {
-    console.error('Login error:', error);
-    res.status(500).json({ message: 'Login failed. Please try again.' });
+    console.error('Signup error:', error);
+    res.status(500).json({ message: 'Could not create account. Please try again.' });
   }
 });
 
@@ -152,7 +134,7 @@ app.post('/api/login', async (req, res) => {
     const email = clean(req.body.email).toLowerCase();
     const password = req.body.password;
 
-    if (!email || typeof password !== 'string' || !password) {
+    if (!email || !password) {
       return res.status(400).json({ message: 'Enter your email address and password.' });
     }
 
@@ -174,7 +156,12 @@ app.post('/api/login', async (req, res) => {
       verified: user.verified || false
     };
 
-    return res.json({ message: 'Login successful.' });
+    req.session.save(err => {
+      if (err) {
+        return res.status(500).json({ message: 'Session save error.' });
+      }
+      res.json({ message: 'Login successful.' });
+    });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ message: 'Login failed. Please try again.' });
@@ -513,8 +500,7 @@ label{font-size:14px;font-weight:bold}
           <option>Remote</option>
         </select>
         <button type="submit">Search Jobs</button>
-
-           </form>
+      </form>
     </div>
 
     <div class="card">
@@ -534,8 +520,9 @@ label{font-size:14px;font-weight:bold}
         <label>Job Title Applying For</label><input name="jobTitle" id="applicantJobTitleInput" required readonly style="background:#f1f5f9;">
         <button type="submit">Submit Application Details</button>
       </form>
-      <p id="applicantMessage" class="notice hidden" role="status"></p>
-    </div>
+      <p id="applicantMessag
+          <p id="applicantMessage" class="notice hidden" role="status"></p>
+    </form>
   </div>
 
   <div class="card hidden" id="myApplicationsView">
@@ -645,7 +632,7 @@ document.addEventListener('click', () => {
 
 async function api(url, options = {}) {
   const response = await fetch(url, {
-    credentials: 'same-origin',
+    credentials: 'include',
     ...options,
     headers: {
       'Content-Type': 'application/json',
@@ -669,6 +656,11 @@ $('signupForm').addEventListener('submit', async event => {
   event.preventDefault();
   const form = new FormData(event.currentTarget);
   const data = Object.fromEntries(form.entries());
+
+  if (data.password !== data.confirmPassword) {
+    showMessage('authMessage', 'Passwords do not match.');
+    return;
+  }
 
   try {
     const result = await api('/api/signup', {
