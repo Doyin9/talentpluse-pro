@@ -25,10 +25,11 @@ app.use(session({
   saveUninitialized: true,
   cookie: {
     httpOnly: false,
-    secure: false,
+    secure: false, // <-- Change this to true (or proxy: true)
     maxAge: 24 * 60 * 60 * 1000
   }
 }));
+
 
 function clean(val) {
   if (!val) return '';
