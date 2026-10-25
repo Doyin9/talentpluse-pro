@@ -1,6 +1,5 @@
 import express from 'express';
 import session from 'express-session';
-import connectPgSimple from 'connect-pg-simple';
 import bcrypt from 'bcryptjs';
 import pg from 'pg';
 const { Pool } = pg;
@@ -16,17 +15,10 @@ const pool = new Pool({
   ssl: { rejectUnauthorized: false }
 });
 
-const PgSession = connectPgSimple(session);
-
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 app.use(session({
-  store: new PgSession({
-    pool: pool,
-    tableName: 'session',
-    createTableIfMissing: true
-  }),
   secret: process.env.SESSION_SECRET || 'change-this-secret-before-production',
   resave: false,
   saveUninitialized: false,
@@ -1048,4 +1040,3 @@ initDB()
     console.error('Database initialization failed:', error);
     process.exit(1);
   });
-  
