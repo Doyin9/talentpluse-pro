@@ -383,8 +383,9 @@ label{font-size:14px;font-weight:bold}
 <section id="dashboardView" class="hidden">
   <div class="card">
     <h2 id="welcome"></h2>
+    <p style="color: #4a5568; margin-top: 6px; font-size: 15px;">A place to grow skills, elevate talent, and build your future.</p>
   </div>
-
+  
   <div class="card">
     <h2>Find Jobs</h2>
     <form id="jobSearchForm">
