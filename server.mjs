@@ -21,14 +21,17 @@ app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 app.use(session({
   secret: 'talentpulse-secret-key',
-  resave: true,
-  saveUninitialized: true,
+  resave: false,
+  saveUninitialized: false,
+  proxy: true,
   cookie: {
-    httpOnly: false,
-    secure: true, // <-- Updated here
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none',
     maxAge: 24 * 60 * 60 * 1000
   }
 }));
+
 
 
 
