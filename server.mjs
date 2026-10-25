@@ -86,7 +86,7 @@ function clean(value) {
 }
 
 function requireLogin(req, res, next) {
-  if (!req.session.user) {
+  if (!req.session || !req.session.user) {
     return res.status(401).json({ message: 'Please log in first.' });
   }
   next();
@@ -193,8 +193,17 @@ app.post('/api/login', async (req, res) => {
 });
 
 app.get('/api/me', requireLogin, async (req, res) => {
-  const result = await pool.query('SELECT id, surname, "firstName", "lastName", username, email, headline, bio, phone, location, avatar, verified FROM users WHERE id = $1', [req.session.user.id]);
-  res.json({ user: result.rows[0] });
+  try {
+    const result = await pool.query('SELECT id, surname, "firstName", "lastName", username, email, headline, bio, phone, location, avatar, verified FROM users WHERE id = $1', [req.session.user.id]);
+    if (!result.rows[0]) {
+      return req.session.destroy(() => {
+        res.status(401).json({ message: 'Please log in again.' });
+      });
+    }
+    res.json({ user: result.rows[0] });
+  } catch (error) {
+    res.status(500).json({ message: 'Session error.' });
+  }
 });
 
 app.get('/api/profile', requireLogin, async (req, res) => {
@@ -515,7 +524,8 @@ label{font-size:14px;font-weight:bold}
           <option>Remote</option>
         </select>
         <button type="submit">Search Jobs</button>
-      </form>
+
+           </form>
     </div>
 
     <div class="card">
