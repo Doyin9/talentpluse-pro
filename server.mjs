@@ -163,29 +163,18 @@ app.post('/api/login', async (req, res) => {
       return res.status(401).json({ message: 'Incorrect email or password.' });
     }
 
-    req.session.regenerate(error => {
-      if (error) {
-        return res.status(500).json({ message: 'Could not start your session.' });
-      }
+    req.session.user = {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      firstName: user.firstName,
+      surname: user.surname,
+      headline: user.headline || '',
+      avatar: user.avatar || '',
+      verified: user.verified || false
+    };
 
-      req.session.user = {
-        id: user.id,
-        username: user.username,
-        email: user.email,
-        firstName: user.firstName,
-        surname: user.surname,
-        headline: user.headline || '',
-        avatar: user.avatar || '',
-        verified: user.verified || false
-      };
-
-      req.session.save(error => {
-        if (error) {
-          return res.status(500).json({ message: 'Could not save your login session.' });
-        }
-        res.json({ message: 'Login successful.' });
-      });
-    });
+    return res.json({ message: 'Login successful.' });
   } catch (error) {
     console.error('Login error:', error);
     res.status(500).json({ message: 'Login failed. Please try again.' });
