@@ -618,6 +618,36 @@ $('menuPassword').addEventListener('click', () => alert('Change Password feature
 // Logout Action
 $('logoutBtn').addEventListener('click', async () => {
   try {
-    await api('/api/logout', { method: 'POST', body: '{}' });
+        await api('/api/logout', { method: 'POST', body: '{}' });
     currentUser = null;
-    $('dashboar
+    $('dashboardView').classList.add('hidden');
+    $('authView').classList.remove('hidden');
+    $('loginForm').reset();
+    showAuth('login');
+  } catch (error) {
+    alert(error.message);
+  }
+});
+
+(async () => {
+  try {
+    await loadDashboard();
+  } catch {
+    $('authView').classList.remove('hidden');
+    $('dashboardView').classList.add('hidden');
+  }
+})();
+</script>
+</body>
+</html>`;
+
+initDB()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log('TalentPulse PRO running on port ' + PORT);
+    });
+  })
+  .catch(error => {
+    console.error('Database initialization failed:', error);
+    process.exit(1);
+  });
