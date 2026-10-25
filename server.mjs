@@ -180,8 +180,7 @@ app.get('/api/me', requireLogin, async (req, res) => {
     }
     res.json({ user: result.rows[0] });
   } catch (error) {
-    console.error('Session error details:', error);
-res.status(500).json({ message: 'Session error: ' + error.message });
+    res.status(500).json({ message: 'Session error.' });
   }
 });
 
@@ -499,7 +498,7 @@ label{font-size:14px;font-weight:bold}
         <select name="type">
           <option value="">All types</option>
           <option>Full-time</option>
-          <option>Part-time</option>
+                    <option>Part-time</option>
           <option>Remote</option>
         </select>
         <button type="submit">Search Jobs</button>
@@ -894,100 +893,6 @@ $('menuSavedJobs').addEventListener('click', async () => {
 });
 
 $('menuProfile').addEventListener('click', async () => {
-  $('mainDashboardContent').classList.add('hidden');$('myApplicationsView').classList.add('hidden');
-  $('savedJobsView').classList.add('hidden');$('profileView').classList.remove('hidden');
-
-  try {
-    const result = await api('/api/profile');
-    const u = result.user;
-    $('profFirstName').value = u.firstName \vert{}\vert{} '';$('profLastName').value = u.lastName || '';
-    $('profSurname').value = u.surname \vert{}\vert{} '';$('profUsername').value = u.username || '';
-    $('profEmail').value = u.email \vert{}\vert{} '';$('profHeadline').value = u.headline || '';
-    $('profBio').value = u.bio \vert{}\vert{} '';$('profPhone').value = u.phone || '';
-    $('profLocation').value = u.location \vert{}\vert{} '';$('avatarBase64').value = u.avatar || '';
-
-    if (u.avatar) {
-      $('avatarPreview').src = u.avatar;
-    }
-  } catch (error) {
-    alert(error.message);
-  }
-});
-
-$('avatarInput').addEventListener('change', event => {
-  const file = event.target.files[0];
-  if (!file) return;
-
-  if (file.size > 5 * 1024 * 1024) {
-    alert('Image file size must be less than 5MB');
-    return;
-  }
-
-  const reader = new FileReader();
-  reader.onload = () => {
-    $('avatarPreview').src = reader.result;
-    $('avatarBase64').value = reader.result;
-  };
-  reader.readAsDataURL(file);
-});
-
-$('profileForm').addEventListener('submit', async event => {
-  event.preventDefault();
-  const data = Object.fromEntries(new FormData(event.currentTarget).entries());
-
-  try {
-    const result = await api('/api/profile', {
-      method: 'PUT',
-      body: JSON.stringify(data)
-    });
-
-    if (data.avatar) {
-      $('dashAvatar').src = data.avatar;
-    }
-
-    $('welcome').textContent = 'Welcome, ' + data.firstName + '!';
-    showMessage('profileMessage', result.message);
-  } catch (error) {
-    showMessage('profileMessage', error.message);
-  }
-});
-
-$('verifyAccountBtn').addEventListener('click', async () => {
-  try {
-    const result = await api('/api/profile/verify', { method: 'POST', body: '{}' });
-    $('verifiedBadge').classList.remove('hidden');
-    alert(result.message);
-  } catch (error) {
-    alert(error.message);
-  }
-});
-
-$('backToDashboardFromAppsBtn').addEventListener('click', () => {
-  $('myApplicationsView').classList.add('hidden');$('mainDashboardContent').classList.remove('hidden');
-});
-
-$('backToDashboardFromSavedBtn').addEventListener('click', () => {
-  $('savedJobsView').classList.add('hidden');$('mainDashboardContent').classList.remove('hidden');
-});
-
-$('backToDashboardFromProfileBtn').addEventListener('click', () => {
-  $('profileView').classList.add('hidden');$('mainDashboardContent').classList.remove('hidden');
-});
-
-$('menuPassword').addEventListener('click', () => alert('Change Password feature coming soon!'));
-
-$('logoutBtn').addEventListener('click', async () => {
-  try {
-    await api('/api/logout', { method: 'POST', body: '{}' });
-    currentUser = null;
-    $('dashboardView').classList.add('hidden');
-    $('authView').classList.remove('hidden');$('loginForm').reset();
-    showAuth('login');
-  } catch (error) {
-    alert(error.message);
-  }
-});
-$('menuProfile').addEventListener('click', async () => {
   $('mainDashboardContent').classList.add('hidden');
   $('myApplicationsView').classList.add('hidden');
   $('savedJobsView').classList.add('hidden');
@@ -1092,7 +997,6 @@ $('logoutBtn').addEventListener('click', async () => {
     alert(error.message);
   }
 });
-
 (async () => {
   try {
     await loadDashboard();
@@ -1104,7 +1008,7 @@ $('logoutBtn').addEventListener('click', async () => {
 })();
 </script>
 </body>
-</html>
+</html>`;
 
 initDB()
   .then(() => {
@@ -1116,4 +1020,3 @@ initDB()
     console.error('Database initialization failed:', error);
     process.exit(1);
   });
-  
