@@ -249,45 +249,37 @@ const jobs = [
     company: 'CareerStart Nigeria',
     location: 'Lagos',
     type: 'Full-time',
-    description: 'An entry-level opportunity for recent graduates.'
+    description: 'An entry-level opportunity for recent graduates.',
+    details: 'This role offers rotations across business operational units, mentorship, soft-skills workshops, and fast-track career progression opportunities.'
   },
   {
     title: 'Customer Service Officer',
     company: 'PeopleFirst Services',
     location: 'Abuja',
     type: 'Full-time',
-    description: 'Help customers and resolve enquiries.'
+    description: 'Help customers and resolve enquiries.',
+    details: 'Responsibilities include taking inbound calls, managing customer queries via email and chat, handling complaint resolution, and maintaining account records.'
   },
   {
     title: 'Junior Web Developer',
     company: 'DigitalWorks',
     location: 'Remote',
     type: 'Remote',
-    description: 'Assist with website development and maintenance.'
+    description: 'Assist with website development and maintenance.',
+    details: 'Requires basic knowledge of HTML/CSS, JavaScript, and responsive layout building. You will collaborate with senior developers on real production web apps.'
   },
   {
     title: 'Administrative Assistant',
     company: 'OfficePoint',
     location: 'Ibadan',
     type: 'Part-time',
-    description: 'Support daily administrative operations.'
+    description: 'Support daily administrative operations.',
+    details: 'Responsible for scheduling meetings, organizing office documents, managing office supply inventory, and writing weekly administrative reports.'
   }
 ];
 
 app.get('/api/jobs', requireLogin, (req, res) => {
-  const search = clean(req.query.search).toLowerCase();
-  const location = clean(req.query.location).toLowerCase();
-  const type = clean(req.query.type).toLowerCase();
-
-  const filtered = jobs.filter(job =>
-    (!search ||
-      `${job.title} ${job.company} ${job.description}`
-        .toLowerCase().includes(search)) &&
-    (!location || job.location.toLowerCase().includes(location)) &&
-    (!type || job.type.toLowerCase() === type)
-  );
-
-  res.json({ jobs: filtered });
+  res.json({ jobs });
 });
 
 app.post('/api/applicants', requireLogin, (req, res) => {
@@ -329,6 +321,7 @@ label{font-size:14px;font-weight:bold}
 .job{border:1px solid #e1e7f0;padding:15px;border-radius:9px;margin:12px 0}
 .notice{margin:12px 0;padding:12px;border-radius:7px;background:#edf4ff}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.job-details-box{background:#f8fafc;padding:15px;border-left:4px solid #185adb;border-radius:6px;margin-bottom:15px}
 @media(max-width:600px){.row{grid-template-columns:1fr}}
 </style>
 </head>
@@ -341,17 +334,17 @@ label{font-size:14px;font-weight:bold}
 <main>
 <section id="authView" class="card">
   <div class="tabs hidden">
-  <button id="loginTab" type="button">Login</button>
-  <button id="signupTab" type="button">Sign Up</button>
-</div>
- <form id="loginForm" class="hidden">
+    <button id="loginTab" type="button">Login</button>
+    <button id="signupTab" type="button">Sign Up</button>
+  </div>
+  <form id="loginForm" class="hidden">
     <h2>Welcome Back</h2>
     <label>Email Address</label>
     <input name="email" type="email" required autocomplete="email">
     <label>Password</label>
     <input name="password" type="password" required autocomplete="current-password">
     <button type="submit">Login</button>
-</form>
+  </form>
 
   <form id="signupForm">
     <h2>Create Your Account</h2>
@@ -378,36 +371,23 @@ label{font-size:14px;font-weight:bold}
 <section id="dashboardView" class="hidden">
   <div class="card">
     <h2 id="welcome"></h2>
-    <p>Search available opportunities and complete your applicant form.</p>
-    <button id="logoutBtn" type="button">Logout</button>
   </div>
 
   <div class="card">
-    <h2>Find Jobs</h2>
-    <form id="jobSearchForm">
-      <label>Job title or keyword</label>
-      <input name="search" placeholder="e.g. developer">
-      <label>Location</label>
-      <input name="location" placeholder="e.g. Lagos or Remote">
-      <label>Job type</label>
-      <select name="type">
-        <option value="">All types</option>
-        <option>Full-time</option>
-        <option>Part-time</option>
-        <option>Remote</option>
-      </select>
-      <button type="submit">Search Jobs</button>
-    </form>
+    <h2 id="jobCountHeader">Job Listings</h2>
     <div id="jobsList"></div>
   </div>
 
   <div class="card hidden" id="applicationSection">
+    <h2>Job Application</h2>
+    <div id="selectedJobOverview" class="job-details-box"></div>
+
     <form id="applicantForm">
       <label>Full Name</label><input name="fullName" required>
       <label>Phone Number</label><input name="phone" type="tel" required>
       <label>Highest Education</label>
       <input name="education" required placeholder="e.g. B.Sc. or OND">
-      <label>Job Title Applying For</label><input name="jobTitle" required>
+      <label>Job Title Applying For</label><input name="jobTitle" id="applicantJobTitleInput" required readonly style="background:#f1f5f9;">
       <button type="submit">Submit Application Details</button>
     </form>
     <p id="applicantMessage" class="notice hidden" role="status"></p>
@@ -465,8 +445,8 @@ $('signupForm').addEventListener('submit', async event => {
       body: JSON.stringify(data)
     });
     event.currentTarget.reset();
-showAuth('login');
-showMessage('authMessage', result.message);
+    showAuth('login');
+    showMessage('authMessage', result.message);
   } catch (error) {
     showMessage('authMessage', error.message);
   }
@@ -496,14 +476,15 @@ async function loadDashboard() {
   await loadJobs();
 }
 
-async function loadJobs(filters = {}) {
-  const params = new URLSearchParams(filters);
-  const result = await api('/api/jobs?' + params.toString());
+async function loadJobs() {
+  const result = await api('/api/jobs');
   const list = $('jobsList');
   list.replaceChildren();
 
+  $('jobCountHeader').textContent = 'Job Listings (' + result.jobs.length + ' Available)';
+
   if (!result.jobs.length) {
-    list.textContent = 'No jobs match your search.';
+    list.textContent = 'No jobs available right now.';
     return;
   }
 
@@ -523,27 +504,20 @@ async function loadJobs(filters = {}) {
     const button = document.createElement('button');
     button.type = 'button';
     button.textContent = 'Apply for this Job';
-button.addEventListener('click', () => {
-  $('applicationSection').classList.remove('hidden');
-  $('applicantForm').elements.jobTitle.value = job.title;
-  $('applicationSection').scrollIntoView({ behavior: 'smooth' });
-});
+    button.addEventListener('click', () => {
+      $('applicationSection').classList.remove('hidden');
+      $('selectedJobOverview').innerHTML = '<h3>Applying for: ' + job.title + '</h3>' +
+        '<p><strong>Company:</strong> ' + job.company + ' (' + job.location + ' - ' + job.type + ')</p>' +
+        '<p><strong>Role Overview:</strong> ' + job.description + '</p>' +
+        '<p><strong>What This Job Entails:</strong> ' + job.details + '</p>';
+      $('applicantJobTitleInput').value = job.title;
+      $('applicationSection').scrollIntoView({ behavior: 'smooth' });
+    });
 
     card.append(title, company, description, button);
     list.append(card);
   });
 }
-
-$('jobSearchForm').addEventListener('submit', async event => {
-  event.preventDefault();
-  const filters = Object.fromEntries(new FormData(event.currentTarget).entries());
-
-  try {
-    await loadJobs(filters);
-  } catch (error) {
-    alert(error.message);
-  }
-});
 
 $('applicantForm').addEventListener('submit', async event => {
   event.preventDefault();
@@ -557,20 +531,6 @@ $('applicantForm').addEventListener('submit', async event => {
     showMessage('applicantMessage', result.message);
   } catch (error) {
     showMessage('applicantMessage', error.message);
-  }
-});
-
-
-$('logoutBtn').addEventListener('click', async () => {
-  try {
-    await api('/api/logout', { method: 'POST', body: '{}' });
-    currentUser = null;
-    $('dashboardView').classList.add('hidden');
-    $('authView').classList.remove('hidden');
-    $('loginForm').reset();
-    showAuth('login');
-  } catch (error) {
-    alert(error.message);
   }
 });
 
@@ -596,3 +556,4 @@ initDB()
     console.error('Database initialization failed:', error);
     process.exit(1);
   });
+  
