@@ -19,13 +19,12 @@ app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
 app.use(session({
-  secret: process.env.SESSION_SECRET || 'change-this-secret-before-production',
-  resave: false,
-  saveUninitialized: false,
+  secret: 'talentpulse-secret-key',
+  resave: true,
+  saveUninitialized: true,
   cookie: {
-    httpOnly: true,
-    secure: process.env.NODE_ENV === 'production',
-    sameSite: 'lax',
+    httpOnly: false,
+    secure: false,
     maxAge: 24 * 60 * 60 * 1000
   }
 }));
