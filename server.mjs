@@ -80,20 +80,29 @@ async function getUsers() {
   return result.rows;
 }
 
-function clean(value) {
-  return typeof value === 'string' ? value.trim() : '';
-}
-
 function requireLogin(req, res, next) {
-  if (!req.session || !req.session.user) {
+  if (!req.session || !req.session.user || !req.session.user.id) {
     return res.status(401).json({ message: 'Please log in first.' });
   }
   next();
 }
 
-app.get('/', (req, res) => {
-  res.type('html').send(page);
+app.get('/api/me', async (req, res) => {
+  try {
+    if (!req.session || !req.session.user || !req.session.user.id) {
+      return res.status(401).json({ message: 'Not logged in.' });
+    }
+    const result = await pool.query('SELECT id, surname, "firstName", "lastName", username, email, headline, bio, phone, location, avatar, verified FROM users WHERE id = $1', [req.session.user.id]);
+    if (!result.rows[0]) {
+      req.session.destroy(() => {});
+      return res.status(401).json({ message: 'Please log in again.' });
+    }
+    res.json({ user: result.rows[0] });
+  } catch (error) {
+    return res.status(401).json({ message: 'Please log in.' });
+  }
 });
+
 
 app.post('/api/signup', async (req, res) => {
   try {
