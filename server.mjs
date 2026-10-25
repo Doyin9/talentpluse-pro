@@ -116,24 +116,6 @@ app.post('/api/login', async (req, res) => {
       return res.status(400).json({ message: 'Enter your email and password.' });
     }
 
-    await pool.query(`
-      CREATE TABLE IF NOT EXISTS users (
-        id TEXT PRIMARY KEY,
-        surname TEXT NOT NULL,
-        "firstName" TEXT NOT NULL,
-        "lastName" TEXT NOT NULL,
-        username TEXT NOT NULL,
-        email TEXT UNIQUE NOT NULL,
-        "passwordHash" TEXT NOT NULL,
-        headline TEXT DEFAULT '',
-        bio TEXT DEFAULT '',
-        phone TEXT DEFAULT '',
-        location TEXT DEFAULT '',
-        avatar TEXT DEFAULT '',
-        verified BOOLEAN DEFAULT false
-      )
-    `);
-
     const result = await pool.query('SELECT * FROM users WHERE LOWER(email) = $1', [email]);
     const user = result.rows[0];
 
@@ -151,10 +133,15 @@ app.post('/api/login', async (req, res) => {
       verified: user.verified || false
     };
 
-    res.json({ message: 'Login successful.' });
+    req.session.save(err => {
+      if (err) {
+        return res.status(500).json({ message: 'Session save error.' });
+      }
+      res.json({ message: 'Login successful.' });
+    });
   } catch (error) {
     console.error('Login error:', error);
-    res.status(500).json({ message: 'Database waking up. Please try again in 10 seconds.' });
+    res.status(500).json({ message: 'Login failed. Please try again.' });
   }
 });
 
