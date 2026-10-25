@@ -28,6 +28,9 @@ app.use(session({
     maxAge: 24 * 60 * 60 * 1000
   }
 }));
+app.get('/', (req, res) => {
+  res.type('html').send(page);
+});
 
 async function initDB() {
   await pool.query(`
