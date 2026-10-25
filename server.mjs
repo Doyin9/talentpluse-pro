@@ -62,6 +62,20 @@ async function initDB() {
       created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
     )
   `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS saved_jobs (
+      id SERIAL PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      job_title TEXT NOT NULL,
+      company TEXT NOT NULL,
+      location TEXT NOT NULL,
+      type TEXT NOT NULL,
+      description TEXT NOT NULL,
+      details TEXT NOT NULL,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )
+  `);
 }
 
 async function getUsers() {
@@ -357,6 +371,57 @@ app.get('/api/applications', requireLogin, async (req, res) => {
   }
 });
 
+app.post('/api/saved-jobs', requireLogin, async (req, res) => {
+  try {
+    const { title, company, location, type, description, details } = req.body;
+    if (!title || !company) {
+      return res.status(400).json({ message: 'Invalid job details.' });
+    }
+
+    const existing = await pool.query(`
+      SELECT id FROM saved_jobs WHERE user_id = $1 AND job_title = $2 AND company = $3
+    `, [req.session.user.id, title, company]);
+
+    if (existing.rows.length > 0) {
+      return res.status(400).json({ message: 'Job is already in your saved list.' });
+    }
+
+    await pool.query(`
+      INSERT INTO saved_jobs (user_id, job_title, company, location, type, description, details)
+      VALUES ($1, $2, $3, $4, $5, $6, $7)
+    `, [req.session.user.id, title, company, location, type, description, details]);
+
+    res.status(201).json({ message: 'Job saved successfully!' });
+  } catch (error) {
+    console.error('Save job error:', error);
+    res.status(500).json({ message: 'Could not save job.' });
+  }
+});
+
+app.get('/api/saved-jobs', requireLogin, async (req, res) => {
+  try {
+    const result = await pool.query(`
+      SELECT * FROM saved_jobs WHERE user_id = $1 ORDER BY id DESC
+    `, [req.session.user.id]);
+    res.json({ savedJobs: result.rows });
+  } catch (error) {
+    console.error('Fetch saved jobs error:', error);
+    res.status(500).json({ message: 'Could not fetch saved jobs.' });
+  }
+});
+
+app.delete('/api/saved-jobs/:id', requireLogin, async (req, res) => {
+  try {
+    await pool.query(`
+      DELETE FROM saved_jobs WHERE id = $1 AND user_id = $2
+    `, [req.params.id, req.session.user.id]);
+    res.json({ message: 'Job removed from saved list.' });
+  } catch (error) {
+    console.error('Delete saved job error:', error);
+    res.status(500).json({ message: 'Could not remove saved job.' });
+  }
+});
+
 const page = `<!DOCTYPE html>
 <html lang="en">
 <head>
@@ -494,9 +559,17 @@ label{font-size:14px;font-weight:bold}
   <div class="card hidden" id="myApplicationsView">
     <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
       <h2>My Submitted Applications</h2>
-      <button type="button" id="backToDashboardBtn" style="background:#64748b;">Back to Jobs</button>
+      <button type="button" id="backToDashboardFromAppsBtn" style="background:#64748b;">Back to Jobs</button>
     </div>
     <div id="myApplicationsList"></div>
+  </div>
+
+  <div class="card hidden" id="savedJobsView">
+    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px;">
+      <h2>My Saved Jobs</h2>
+      <button type="button" id="backToDashboardFromSavedBtn" style="background:#64748b;">Back to Jobs</button>
+    </div>
+    <div id="savedJobsList"></div>
   </div>
 </section>
 </main>
@@ -618,10 +691,15 @@ async function loadJobs(filters = {}) {
     const description = document.createElement('p');
     description.textContent = job.description;
 
-    const button = document.createElement('button');
-    button.type = 'button';
-    button.textContent = 'Apply for this Job';
-    button.addEventListener('click', () => {
+    const btnContainer = document.createElement('div');
+    btnContainer.style.display = 'flex';
+    btnContainer.style.gap = '10px';
+    btnContainer.style.marginTop = '10px';
+
+    const applyBtn = document.createElement('button');
+    applyBtn.type = 'button';
+    applyBtn.textContent = 'Apply for this Job';
+    applyBtn.addEventListener('click', () => {
       $('applicationSection').classList.remove('hidden');
       $('selectedJobOverview').innerHTML = '<h3>Applying for: ' + job.title + '</h3>' +
         '<p><strong>Company:</strong> ' + job.company + ' (' + job.location + ' - ' + job.type + ')</p>' +
@@ -631,7 +709,24 @@ async function loadJobs(filters = {}) {
       $('applicationSection').scrollIntoView({ behavior: 'smooth' });
     });
 
-    card.append(title, company, description, button);
+    const saveBtn = document.createElement('button');
+    saveBtn.type = 'button';
+    saveBtn.textContent = 'Save Job';
+    saveBtn.style.background = '#059669';
+    saveBtn.addEventListener('click', async () => {
+      try {
+        const res = await api('/api/saved-jobs', {
+          method: 'POST',
+          body: JSON.stringify(job)
+        });
+        alert(res.message);
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+
+    btnContainer.append(applyBtn, saveBtn);
+    card.append(title, company, description, btnContainer);
     list.append(card);
   });
 }
@@ -665,6 +760,7 @@ $('applicantForm').addEventListener('submit', async event => {
 
 $('menuMyApplications').addEventListener('click', async () => {
   $('mainDashboardContent').classList.add('hidden');
+  $('savedJobsView').classList.add('hidden');
   $('myApplicationsView').classList.remove('hidden');
 
   try {
@@ -692,12 +788,83 @@ $('menuMyApplications').addEventListener('click', async () => {
   }
 });
 
-$('backToDashboardBtn').addEventListener('click', () => {
+$('menuSavedJobs').addEventListener('click', async () => {
+  $('mainDashboardContent').classList.add('hidden');
+  $('myApplicationsView').classList.add('hidden');
+  $('savedJobsView').classList.remove('hidden');
+
+  try {
+    const result = await api('/api/saved-jobs');
+    const container = $('savedJobsList');
+    container.replaceChildren();
+
+    if (!result.savedJobs.length) {
+      container.textContent = 'You have not saved any jobs yet.';
+      return;
+    }
+
+    result.savedJobs.forEach(job => {
+      const box = document.createElement('div');
+      box.className = 'job';
+      box.innerHTML = '<h3>' + job.job_title + '</h3>' +
+        '<p><strong>Company:</strong> ' + job.company + ' • ' + job.location + ' • ' + job.type + '</p>' +
+        '<p>' + job.description + '</p>';
+
+      const btnRow = document.createElement('div');
+      btnRow.style.display = 'flex';
+      btnRow.style.gap = '10px';
+      btnRow.style.marginTop = '10px';
+
+      const applyFromSavedBtn = document.createElement('button');
+      applyFromSavedBtn.type = 'button';
+      applyFromSavedBtn.textContent = 'Apply Now';
+      applyFromSavedBtn.addEventListener('click', () => {
+        $('savedJobsView').classList.add('hidden');
+        $('mainDashboardContent').classList.remove('hidden');
+        $('applicationSection').classList.remove('hidden');
+        $('selectedJobOverview').innerHTML = '<h3>Applying for: ' + job.job_title + '</h3>' +
+          '<p><strong>Company:</strong> ' + job.company + ' (' + job.location + ' - ' + job.type + ')</p>' +
+          '<p><strong>Role Overview:</strong> ' + job.description + '</p>' +
+          '<p><strong>What This Job Entails:</strong> ' + job.details + '</p>';
+        $('applicantJobTitleInput').value = job.job_title;
+        $('applicationSection').scrollIntoView({ behavior: 'smooth' });
+      });
+
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.textContent = 'Remove';
+      removeBtn.style.background = '#dc2626';
+      removeBtn.addEventListener('click', async () => {
+        try {
+          await api('/api/saved-jobs/' + job.id, { method: 'DELETE' });
+          box.remove();
+          if (!container.children.length) {
+            container.textContent = 'You have not saved any jobs yet.';
+          }
+        } catch (err) {
+          alert(err.message);
+        }
+      });
+
+      btnRow.append(applyFromSavedBtn, removeBtn);
+      box.append(btnRow);
+      container.append(box);
+    });
+  } catch (error) {
+    alert(error.message);
+  }
+});
+
+$('backToDashboardFromAppsBtn').addEventListener('click', () => {
   $('myApplicationsView').classList.add('hidden');
   $('mainDashboardContent').classList.remove('hidden');
 });
 
-$('menuSavedJobs').addEventListener('click', () => alert('Saved Jobs feature coming soon!'));
+$('backToDashboardFromSavedBtn').addEventListener('click', () => {
+  $('savedJobsView').classList.add('hidden');
+  $('mainDashboardContent').classList.remove('hidden');
+});
+
 $('menuProfile').addEventListener('click', () => alert('Profile Settings feature coming soon!'));
 $('menuPassword').addEventListener('click', () => alert('Change Password feature coming soon!'));
 
@@ -736,3 +903,294 @@ initDB()
     console.error('Database initialization failed:', error);
     process.exit(1);
   });
+'Content-Type': 'application/json',
+      ...(options.headers || {})
+    }
+  });
+
+  const data = await response.json();
+  if (!response.ok) throw new Error(data.message || 'Request failed.');
+  return data;
+}
+
+$('signupForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  const form = new FormData(event.currentTarget);
+  const data = Object.fromEntries(form.entries());
+
+  try {
+    const result = await api('/api/signup', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+    event.currentTarget.reset();
+    showAuth('login');
+    showMessage('authMessage', result.message);
+  } catch (error) {
+    showMessage('authMessage', error.message);
+  }
+});
+
+$('loginForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  const data = Object.fromEntries(new FormData(event.currentTarget).entries());
+
+  try {
+    await api('/api/login', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+    await loadDashboard();
+  } catch (error) {
+    showMessage('authMessage', error.message);
+  }
+});
+
+async function loadDashboard() {
+  const result = await api('/api/me');
+  currentUser = result.user;
+  $('authView').classList.add('hidden');
+  $('dashboardView').classList.remove('hidden');
+  $('welcome').textContent = 'Welcome, ' + currentUser.firstName + '!';
+  await loadJobs();
+}
+
+async function loadJobs(filters = {}) {
+  const params = new URLSearchParams(filters);
+  const result = await api('/api/jobs?' + params.toString());
+  const list = $('jobsList');
+  list.replaceChildren();
+
+  $('jobCountHeader').textContent = 'Job Listings (' + result.jobs.length + ' Available)';
+
+  if (!result.jobs.length) {
+    list.textContent = 'No jobs match your search.';
+    return;
+  }
+
+  result.jobs.forEach(job => {
+    const card = document.createElement('article');
+    card.className = 'job';
+
+    const title = document.createElement('h3');
+    title.textContent = job.title;
+
+    const company = document.createElement('p');
+    company.textContent = job.company + ' • ' + job.location + ' • ' + job.type;
+
+    const description = document.createElement('p');
+    description.textContent = job.description;
+
+    const btnContainer = document.createElement('div');
+    btnContainer.style.display = 'flex';
+    btnContainer.style.gap = '10px';
+    btnContainer.style.marginTop = '10px';
+
+    const applyBtn = document.createElement('button');
+    applyBtn.type = 'button';
+    applyBtn.textContent = 'Apply for this Job';
+    applyBtn.addEventListener('click', () => {
+      $('applicationSection').classList.remove('hidden');
+      $('selectedJobOverview').innerHTML = '<h3>Applying for: ' + job.title + '</h3>' +
+        '<p><strong>Company:</strong> ' + job.company + ' (' + job.location + ' - ' + job.type + ')</p>' +
+        '<p><strong>Role Overview:</strong> ' + job.description + '</p>' +
+        '<p><strong>What This Job Entails:</strong> ' + job.details + '</p>';
+      $('applicantJobTitleInput').value = job.title;
+      $('applicationSection').scrollIntoView({ behavior: 'smooth' });
+    });
+
+    const saveBtn = document.createElement('button');
+    saveBtn.type = 'button';
+    saveBtn.textContent = 'Save Job';
+    saveBtn.style.background = '#059669';
+    saveBtn.addEventListener('click', async () => {
+      try {
+        const res = await api('/api/saved-jobs', {
+          method: 'POST',
+          body: JSON.stringify(job)
+        });
+        alert(res.message);
+      } catch (err) {
+        alert(err.message);
+      }
+    });
+
+    btnContainer.append(applyBtn, saveBtn);
+    card.append(title, company, description, btnContainer);
+    list.append(card);
+  });
+}
+
+$('jobSearchForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  const filters = Object.fromEntries(new FormData(event.currentTarget).entries());
+
+  try {
+    await loadJobs(filters);
+  } catch (error) {
+    alert(error.message);
+  }
+});
+
+$('applicantForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  const data = Object.fromEntries(new FormData(event.currentTarget).entries());
+
+  try {
+    const result = await api('/api/applicants', {
+      method: 'POST',
+      body: JSON.stringify(data)
+    });
+    showMessage('applicantMessage', result.message);
+    event.currentTarget.reset();
+  } catch (error) {
+    showMessage('applicantMessage', error.message);
+  }
+});
+
+$('menuMyApplications').addEventListener('click', async () => {
+  $('mainDashboardContent').classList.add('hidden');
+  $('savedJobsView').classList.add('hidden');
+  $('myApplicationsView').classList.remove('hidden');
+
+  try {
+    const result = await api('/api/applications');
+    const container = $('myApplicationsList');
+    container.replaceChildren();
+
+    if (!result.applications.length) {
+      container.textContent = 'You have not submitted any applications yet.';
+      return;
+    }
+
+    result.applications.forEach(app => {
+      const box = document.createElement('div');
+      box.className = 'job';
+      box.innerHTML = '<h3>' + app.job_title + '</h3>' +
+        '<p><strong>Applicant Name:</strong> ' + app.full_name + '</p>' +
+        '<p><strong>Phone:</strong> ' + app.phone + '</p>' +
+        '<p><strong>Education:</strong> ' + app.education + '</p>' +
+        '<p style="color:#64748b; font-size:13px;">Submitted on: ' + new Date(app.created_at).toLocaleString() + '</p>';
+      container.append(box);
+    });
+  } catch (error) {
+    alert(error.message);
+  }
+});
+
+$('menuSavedJobs').addEventListener('click', async () => {
+  $('mainDashboardContent').classList.add('hidden');
+  $('myApplicationsView').classList.add('hidden');
+  $('savedJobsView').classList.remove('hidden');
+
+  try {
+    const result = await api('/api/saved-jobs');
+    const container = $('savedJobsList');
+    container.replaceChildren();
+
+    if (!result.savedJobs.length) {
+      container.textContent = 'You have not saved any jobs yet.';
+      return;
+    }
+
+    result.savedJobs.forEach(job => {
+      const box = document.createElement('div');
+      box.className = 'job';
+      box.innerHTML = '<h3>' + job.job_title + '</h3>' +
+        '<p><strong>Company:</strong> ' + job.company + ' • ' + job.location + ' • ' + job.type + '</p>' +
+        '<p>' + job.description + '</p>';
+
+      const btnRow = document.createElement('div');
+      btnRow.style.display = 'flex';
+      btnRow.style.gap = '10px';
+      btnRow.style.marginTop = '10px';
+
+      const applyFromSavedBtn = document.createElement('button');
+      applyFromSavedBtn.type = 'button';
+      applyFromSavedBtn.textContent = 'Apply Now';
+      applyFromSavedBtn.addEventListener('click', () => {
+        $('savedJobsView').classList.add('hidden');
+        $('mainDashboardContent').classList.remove('hidden');
+        $('applicationSection').classList.remove('hidden');
+        $('selectedJobOverview').innerHTML = '<h3>Applying for: ' + job.job_title + '</h3>' +
+          '<p><strong>Company:</strong> ' + job.company + ' (' + job.location + ' - ' + job.type + ')</p>' +
+          '<p><strong>Role Overview:</strong> ' + job.description + '</p>' +
+          '<p><strong>What This Job Entails:</strong> ' + job.details + '</p>';
+        $('applicantJobTitleInput').value = job.job_title;
+        $('applicationSection').scrollIntoView({ behavior: 'smooth' });
+      });
+
+      const removeBtn = document.createElement('button');
+      removeBtn.type = 'button';
+      removeBtn.textContent = 'Remove';
+      removeBtn.style.background = '#dc2626';
+      removeBtn.addEventListener('click', async () => {
+        try {
+          await api('/api/saved-jobs/' + job.id, { method: 'DELETE' });
+          box.remove();
+          if (!container.children.length) {
+            container.textContent = 'You have not saved any jobs yet.';
+          }
+        } catch (err) {
+          alert(err.message);
+        }
+      });
+
+      btnRow.append(applyFromSavedBtn, removeBtn);
+      box.append(btnRow);
+      container.append(box);
+    });
+  } catch (error) {
+    alert(error.message);
+  }
+});
+
+$('backToDashboardFromAppsBtn').addEventListener('click', () => {
+  $('myApplicationsView').classList.add('hidden');
+  $('mainDashboardContent').classList.remove('hidden');
+});
+
+$('backToDashboardFromSavedBtn').addEventListener('click', () => {
+  $('savedJobsView').classList.add('hidden');
+  $('mainDashboardContent').classList.remove('hidden');
+});
+
+$('menuProfile').addEventListener('click', () => alert('Profile Settings feature coming soon!'));
+$('menuPassword').addEventListener('click', () => alert('Change Password feature coming soon!'));
+
+$('logoutBtn').addEventListener('click', async () => {
+  try {
+    await api('/api/logout', { method: 'POST', body: '{}' });
+    currentUser = null;
+    $('dashboardView').classList.add('hidden');
+    $('authView').classList.remove('hidden');
+    $('loginForm').reset();
+    showAuth('login');
+  } catch (error) {
+    alert(error.message);
+  }
+});
+
+(async () => {
+  try {
+    await loadDashboard();
+  } catch {
+    $('authView').classList.remove('hidden');
+    $('dashboardView').classList.add('hidden');
+  }
+})();
+</script>
+</body>
+</html>`;
+
+initDB()
+  .then(() => {
+    app.listen(PORT, () => {
+      console.log('TalentPulse PRO running on port ' + PORT);
+    });
+  })
+  .catch(error => {
+    console.error('Database initialization failed:', error);
+    process.exit(1);
+  });
+      
