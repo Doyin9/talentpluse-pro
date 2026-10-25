@@ -107,54 +107,54 @@ app.get('/api/me', async (req, res) => {
 });
 
 
-app.post('/api/signup', async (req, res) => {
+app.post('/api/login', async (req, res) => {
   try {
-    const surname = clean(req.body.surname);
-    const firstName = clean(req.body.firstName);
-    const lastName = clean(req.body.lastName);
-    const username = clean(req.body.username);
-    const email = clean(req.body.email).toLowerCase();
+    const email = (req.body.email || '').trim().toLowerCase();
     const password = req.body.password;
-    const confirmPassword = req.body.confirmPassword;
 
-    if (!surname || !firstName || !lastName || !username || !email || !password) {
-      return res.status(400).json({ message: 'Please fill in every field.' });
+    if (!email || !password) {
+      return res.status(400).json({ message: 'Enter your email and password.' });
     }
-
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-      return res.status(400).json({ message: 'Enter a valid email address.' });
-    }
-
-    if (typeof password !== 'string' || password.length < 8) {
-      return res.status(400).json({ message: 'Password must contain at least 8 characters.' });
-    }
-
-    if (password !== confirmPassword) {
-      return res.status(400).json({ message: 'Passwords do not match.' });
-    }
-
-    const users = await getUsers();
-
-    if (users.some(u => u.username.toLowerCase() === username.toLowerCase())) {
-      return res.status(409).json({ message: 'That username is already registered.' });
-    }
-
-    if (users.some(u => u.email === email)) {
-      return res.status(409).json({ message: 'That email is already registered.' });
-    }
-
-    const passwordHash = await bcrypt.hash(password, 12);
-    const userId = Date.now().toString();
 
     await pool.query(`
-      INSERT INTO users (id, surname, "firstName", "lastName", username, email, "passwordHash")
-      VALUES ($1, $2, $3, $4, $5, $6, $7)
-    `, [userId, surname, firstName, lastName, username, email, passwordHash]);
+      CREATE TABLE IF NOT EXISTS users (
+        id TEXT PRIMARY KEY,
+        surname TEXT NOT NULL,
+        "firstName" TEXT NOT NULL,
+        "lastName" TEXT NOT NULL,
+        username TEXT NOT NULL,
+        email TEXT UNIQUE NOT NULL,
+        "passwordHash" TEXT NOT NULL,
+        headline TEXT DEFAULT '',
+        bio TEXT DEFAULT '',
+        phone TEXT DEFAULT '',
+        location TEXT DEFAULT '',
+        avatar TEXT DEFAULT '',
+        verified BOOLEAN DEFAULT false
+      )
+    `);
 
-    res.status(201).json({ message: 'Account created successfully. Please log in.' });
+    const result = await pool.query('SELECT * FROM users WHERE LOWER(email) = $1', [email]);
+    const user = result.rows[0];
+
+    if (!user || !await bcrypt.compare(password, user.passwordHash)) {
+      return res.status(401).json({ message: 'Incorrect email or password.' });
+    }
+
+    req.session.user = {
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      firstName: user.firstName,
+      surname: user.surname,
+      avatar: user.avatar || '',
+      verified: user.verified || false
+    };
+
+    res.json({ message: 'Login successful.' });
   } catch (error) {
-    console.error('Signup error:', error);
-    res.status(500).json({ message: 'Could not create your account. Please try again.' });
+    console.error('Login error:', error);
+    res.status(500).json({ message: 'Database waking up. Please try again in 10 seconds.' });
   }
 });
 
