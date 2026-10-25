@@ -1,9 +1,9 @@
 import express from 'express';
 import session from 'express-session';
+import connectPgSimple from 'connect-pg-simple';
 import bcrypt from 'bcryptjs';
 import pg from 'pg';
 const { Pool } = pg;
-import fs from 'fs/promises';
 import path from 'path';
 import { fileURLToPath } from 'url';
 
@@ -11,15 +11,22 @@ const app = express();
 const PORT = process.env.PORT || 3000;
 app.set('trust proxy', 1);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
-const USERS_FILE = path.join(__dirname, 'users.json');
 const pool = new Pool({
   connectionString: process.env.DATABASE_URL,
   ssl: { rejectUnauthorized: false }
 });
+
+const PgSession = connectPgSimple(session);
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 app.use(session({
+  store: new PgSession({
+    pool: pool,
+    tableName: 'session',
+    createTableIfMissing: true
+  }),
   secret: process.env.SESSION_SECRET || 'change-this-secret-before-production',
   resave: false,
   saveUninitialized: false,
@@ -76,6 +83,7 @@ async function saveUsers(users) {
     ]);
   }
 }
+
 function clean(value) {
   return typeof value === 'string' ? value.trim() : '';
 }
@@ -335,7 +343,6 @@ label{font-size:14px;font-weight:bold}
 .row{display:grid;grid-template-columns:1fr 1fr;gap:12px}
 .job-details-box{background:#f8fafc;padding:15px;border-left:4px solid #185adb;border-radius:6px;margin-bottom:15px}
 
-/* Hamburger Menu Styling */
 .menu-container{position:absolute;top:20px;left:20px}
 .menu-btn{background:none;border:none;font-size:24px;cursor:pointer;color:#10284b;padding:0;line-height:1}
 .dropdown-menu{position:absolute;top:35px;left:0;background:white;box-shadow:0 4px 15px rgba(0,0,0,0.15);border-radius:8px;width:200px;z-index:100;overflow:hidden}
@@ -391,7 +398,6 @@ label{font-size:14px;font-weight:bold}
 
 <section id="dashboardView" class="hidden">
   <div class="card" style="padding-top:50px;">
-    <!-- Hamburger Menu Button & Dropdown -->
     <div class="menu-container">
       <button id="menuBtn" class="menu-btn" type="button" aria-label="Menu">☰</button>
       <div id="dropdownMenu" class="dropdown-menu hidden">
@@ -472,7 +478,6 @@ $('existingLoginBtn').addEventListener('click', () => {
 $('loginTab').addEventListener('click', () => showAuth('login'));
 $('signupTab').addEventListener('click', () => showAuth('signup'));
 
-// Toggle Hamburger Menu
 $('menuBtn').addEventListener('click', (e) => {
   e.stopPropagation();
   $('dropdownMenu').classList.toggle('hidden');
@@ -609,16 +614,14 @@ $('applicantForm').addEventListener('submit', async event => {
   }
 });
 
-// Menu Action Placeholders
 $('menuMyApplications').addEventListener('click', () => alert('My Applications feature coming soon!'));
 $('menuSavedJobs').addEventListener('click', () => alert('Saved Jobs feature coming soon!'));
 $('menuProfile').addEventListener('click', () => alert('Profile Settings feature coming soon!'));
 $('menuPassword').addEventListener('click', () => alert('Change Password feature coming soon!'));
 
-// Logout Action
 $('logoutBtn').addEventListener('click', async () => {
   try {
-        await api('/api/logout', { method: 'POST', body: '{}' });
+       await api('/api/logout', { method: 'POST', body: '{}' });
     currentUser = null;
     $('dashboardView').classList.add('hidden');
     $('authView').classList.remove('hidden');
