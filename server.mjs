@@ -680,13 +680,11 @@ $('menuMyApplications').addEventListener('click', async () => {
     result.applications.forEach(app => {
       const box = document.createElement('div');
       box.className = 'job';
-      box.innerHTML = `
-        <h3>${app.job_title}</h3>
-        <p><strong>Applicant Name:</strong> ${app.full_name}</p>
-        <p><strong>Phone:</strong> ${app.phone}</p>
-        <p><strong>Education:</strong> ${app.education}</p>
-        <p style="color:#64748b; font-size:13px;">Submitted on: ${new Date(app.created_at).toLocaleString()}</p>
-      `;
+      box.innerHTML = '<h3>' + app.job_title + '</h3>' +
+        '<p><strong>Applicant Name:</strong> ' + app.full_name + '</p>' +
+        '<p><strong>Phone:</strong> ' + app.phone + '</p>' +
+        '<p><strong>Education:</strong> ' + app.education + '</p>' +
+        '<p style="color:#64748b; font-size:13px;">Submitted on: ' + new Date(app.created_at).toLocaleString() + '</p>';
       container.append(box);
     });
   } catch (error) {
