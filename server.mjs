@@ -180,7 +180,8 @@ app.get('/api/me', requireLogin, async (req, res) => {
     }
     res.json({ user: result.rows[0] });
   } catch (error) {
-    res.status(500).json({ message: 'Session error.' });
+    console.error('Session error details:', error);
+res.status(500).json({ message: 'Session error: ' + error.message });
   }
 });
 
