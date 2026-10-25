@@ -32,9 +32,6 @@ app.use(session({
   }
 }));
 
-
-
-
 function clean(val) {
   if (!val) return '';
   return String(val).trim();
@@ -525,9 +522,8 @@ label{font-size:14px;font-weight:bold}
         <label>Job Title Applying For</label><input name="jobTitle" id="applicantJobTitleInput" required readonly style="background:#f1f5f9;">
         <button type="submit">Submit Application Details</button>
       </form>
-      <p id="applicantMessag
-          <p id="applicantMessage" class="notice hidden" role="status"></p>
-    </form>
+      <p id="applicantMessage" class="notice hidden" role="status"></p>
+    </div>
   </div>
 
   <div class="card hidden" id="myApplicationsView">
@@ -562,7 +558,7 @@ label{font-size:14px;font-weight:bold}
     </div>
 
     <form id="profileForm">
-      <input type="hidden" id="avatarBase64" name="avatar">
+     <input type="hidden" id="avatarBase64" name="avatar">
       <div class="row">
         <div><label>First Name</label><input name="firstName" id="profFirstName" required></div>
         <div><label>Last Name</label><input name="lastName" id="profLastName" required></div>
@@ -617,14 +613,11 @@ function showMessage(id, message) {
 function showAuth(mode) {
   const signup = mode === 'signup';
   $('loginForm').classList.toggle('hidden', signup);
-  $('signupForm').classList.toggle('hidden', !signup);
-  $('loginTab').classList.toggle('active', !signup);
-  $('signupTab').classList.toggle('active', signup);
-  $('authMessage').classList.add('hidden');
+  $('signupForm').classList.toggle('hidden', !signup);$('loginTab').classList.toggle('active', !signup);
+  $('signupTab').classList.toggle('active', signup);$('authMessage').classList.add('hidden');
 }
 
-$('loginTab').addEventListener('click', () => showAuth('login'));
-$('signupTab').addEventListener('click', () => showAuth('signup'));
+$('loginTab').addEventListener('click', () => showAuth('login'));$('signupTab').addEventListener('click', () => showAuth('signup'));
 
 $('menuBtn').addEventListener('click', (e) => {
   e.stopPropagation();
@@ -699,8 +692,7 @@ async function loadDashboard() {
   const result = await api('/api/me');
   currentUser = result.user;
   $('authView').classList.add('hidden');
-  $('dashboardView').classList.remove('hidden');
-  $('welcome').textContent = 'Welcome, ' + currentUser.firstName + '!';
+  $('dashboardView').classList.remove('hidden');$('welcome').textContent = 'Welcome, ' + currentUser.firstName + '!';
 
   if (currentUser.avatar) {
     $('dashAvatar').src = currentUser.avatar;
@@ -750,8 +742,7 @@ async function loadJobs(filters = {}) {
     applyBtn.type = 'button';
     applyBtn.textContent = 'Apply for this Job';
     applyBtn.addEventListener('click', () => {
-      $('applicationSection').classList.remove('hidden');
-      $('selectedJobOverview').innerHTML = '<h3>Applying for: ' + job.title + '</h3>' +
+      $('applicationSection').classList.remove('hidden');$('selectedJobOverview').innerHTML = '<h3>Applying for: ' + job.title + '</h3>' +
         '<p><strong>Company:</strong> ' + job.company + ' (' + job.location + ' - ' + job.type + ')</p>' +
         '<p><strong>Role Overview:</strong> ' + job.description + '</p>' +
         '<p><strong>What This Job Entails:</strong> ' + job.details + '</p>';
@@ -809,10 +800,8 @@ $('applicantForm').addEventListener('submit', async event => {
 });
 
 $('menuMyApplications').addEventListener('click', async () => {
-  $('mainDashboardContent').classList.add('hidden');
-  $('savedJobsView').classList.add('hidden');
-  $('profileView').classList.add('hidden');
-  $('myApplicationsView').classList.remove('hidden');
+  $('mainDashboardContent').classList.add('hidden');$('savedJobsView').classList.add('hidden');
+  $('profileView').classList.add('hidden');$('myApplicationsView').classList.remove('hidden');
 
   try {
     const result = await api('/api/applications');
@@ -840,10 +829,8 @@ $('menuMyApplications').addEventListener('click', async () => {
 });
 
 $('menuSavedJobs').addEventListener('click', async () => {
-  $('mainDashboardContent').classList.add('hidden');
-  $('myApplicationsView').classList.add('hidden');
-  $('profileView').classList.add('hidden');
-  $('savedJobsView').classList.remove('hidden');
+  $('mainDashboardContent').classList.add('hidden');$('myApplicationsView').classList.add('hidden');
+  $('profileView').classList.add('hidden');$('savedJobsView').classList.remove('hidden');
 
   try {
     const result = await api('/api/saved-jobs');
@@ -871,10 +858,8 @@ $('menuSavedJobs').addEventListener('click', async () => {
       applyFromSavedBtn.type = 'button';
       applyFromSavedBtn.textContent = 'Apply Now';
       applyFromSavedBtn.addEventListener('click', () => {
-        $('savedJobsView').classList.add('hidden');
-        $('mainDashboardContent').classList.remove('hidden');
-        $('applicationSection').classList.remove('hidden');
-        $('selectedJobOverview').innerHTML = '<h3>Applying for: ' + job.job_title + '</h3>' +
+        $('savedJobsView').classList.add('hidden');$('mainDashboardContent').classList.remove('hidden');
+        $('applicationSection').classList.remove('hidden');$('selectedJobOverview').innerHTML = '<h3>Applying for: ' + job.job_title + '</h3>' +
           '<p><strong>Company:</strong> ' + job.company + ' (' + job.location + ' - ' + job.type + ')</p>' +
           '<p><strong>Role Overview:</strong> ' + job.description + '</p>' +
           '<p><strong>What This Job Entails:</strong> ' + job.details + '</p>';
@@ -907,6 +892,100 @@ $('menuSavedJobs').addEventListener('click', async () => {
   }
 });
 
+$('menuProfile').addEventListener('click', async () => {
+  $('mainDashboardContent').classList.add('hidden');$('myApplicationsView').classList.add('hidden');
+  $('savedJobsView').classList.add('hidden');$('profileView').classList.remove('hidden');
+
+  try {
+    const result = await api('/api/profile');
+    const u = result.user;
+    $('profFirstName').value = u.firstName \vert{}\vert{} '';$('profLastName').value = u.lastName || '';
+    $('profSurname').value = u.surname \vert{}\vert{} '';$('profUsername').value = u.username || '';
+    $('profEmail').value = u.email \vert{}\vert{} '';$('profHeadline').value = u.headline || '';
+    $('profBio').value = u.bio \vert{}\vert{} '';$('profPhone').value = u.phone || '';
+    $('profLocation').value = u.location \vert{}\vert{} '';$('avatarBase64').value = u.avatar || '';
+
+    if (u.avatar) {
+      $('avatarPreview').src = u.avatar;
+    }
+  } catch (error) {
+    alert(error.message);
+  }
+});
+
+$('avatarInput').addEventListener('change', event => {
+  const file = event.target.files[0];
+  if (!file) return;
+
+  if (file.size > 5 * 1024 * 1024) {
+    alert('Image file size must be less than 5MB');
+    return;
+  }
+
+  const reader = new FileReader();
+  reader.onload = () => {
+    $('avatarPreview').src = reader.result;
+    $('avatarBase64').value = reader.result;
+  };
+  reader.readAsDataURL(file);
+});
+
+$('profileForm').addEventListener('submit', async event => {
+  event.preventDefault();
+  const data = Object.fromEntries(new FormData(event.currentTarget).entries());
+
+  try {
+    const result = await api('/api/profile', {
+      method: 'PUT',
+      body: JSON.stringify(data)
+    });
+
+    if (data.avatar) {
+      $('dashAvatar').src = data.avatar;
+    }
+
+    $('welcome').textContent = 'Welcome, ' + data.firstName + '!';
+    showMessage('profileMessage', result.message);
+  } catch (error) {
+    showMessage('profileMessage', error.message);
+  }
+});
+
+$('verifyAccountBtn').addEventListener('click', async () => {
+  try {
+    const result = await api('/api/profile/verify', { method: 'POST', body: '{}' });
+    $('verifiedBadge').classList.remove('hidden');
+    alert(result.message);
+  } catch (error) {
+    alert(error.message);
+  }
+});
+
+$('backToDashboardFromAppsBtn').addEventListener('click', () => {
+  $('myApplicationsView').classList.add('hidden');$('mainDashboardContent').classList.remove('hidden');
+});
+
+$('backToDashboardFromSavedBtn').addEventListener('click', () => {
+  $('savedJobsView').classList.add('hidden');$('mainDashboardContent').classList.remove('hidden');
+});
+
+$('backToDashboardFromProfileBtn').addEventListener('click', () => {
+  $('profileView').classList.add('hidden');$('mainDashboardContent').classList.remove('hidden');
+});
+
+$('menuPassword').addEventListener('click', () => alert('Change Password feature coming soon!'));
+
+$('logoutBtn').addEventListener('click', async () => {
+  try {
+    await api('/api/logout', { method: 'POST', body: '{}' });
+    currentUser = null;
+    $('dashboardView').classList.add('hidden');
+    $('authView').classList.remove('hidden');$('loginForm').reset();
+    showAuth('login');
+  } catch (error) {
+    alert(error.message);
+  }
+});
 $('menuProfile').addEventListener('click', async () => {
   $('mainDashboardContent').classList.add('hidden');
   $('myApplicationsView').classList.add('hidden');
@@ -1024,7 +1103,7 @@ $('logoutBtn').addEventListener('click', async () => {
 })();
 </script>
 </body>
-</html>`;
+</html>
 
 initDB()
   .then(() => {
@@ -1036,3 +1115,4 @@ initDB()
     console.error('Database initialization failed:', error);
     process.exit(1);
   });
+  
