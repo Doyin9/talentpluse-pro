@@ -41,6 +41,8 @@ app.get('/', (req, res) => {
   res.type('html').send(page);
 });
 
+
+
 async function initDB() {
   await pool.query(`
     CREATE TABLE IF NOT EXISTS users (
@@ -52,6 +54,7 @@ async function initDB() {
       email TEXT UNIQUE NOT NULL,
       "passwordHash" TEXT NOT NULL,
       headline TEXT DEFAULT '',
+      skills TEXT DEFAULT '',
       bio TEXT DEFAULT '',
       phone TEXT DEFAULT '',
       location TEXT DEFAULT '',
@@ -60,6 +63,10 @@ async function initDB() {
     )
   `);
 
+    await pool.query(`
+    ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS skills TEXT DEFAULT ''
+  `);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS applications (
       id SERIAL PRIMARY KEY,
@@ -235,14 +242,29 @@ app.post('/api/change-password', requireLogin, async (req, res) => {
     });
   }
 });
+
+
 app.get('/api/profile', requireLogin, async (req, res) => {
   try {
-    const result = await pool.query('SELECT id, surname, "firstName", "lastName", username, email, headline, bio, phone, location, avatar, verified FROM users WHERE id = $1', [req.session.user.id]);
+    const result = await pool.query(
+      `SELECT id, surname, "firstName", "lastName",
+              username, email, headline, skills, bio,
+              phone, location, avatar, verified
+       FROM users
+       WHERE id = $1`,
+      [req.session.user.id]
+    );
+
     res.json({ user: result.rows[0] });
   } catch (error) {
-    res.status(500).json({ message: 'Could not fetch profile.' });
+    console.error('Fetch profile error:', error);
+    res.status(500).json({
+      message: 'Could not fetch profile.'
+    });
   }
 });
+
+
 
 app.put('/api/profile', requireLogin, async (req, res) => {
   try {
@@ -251,18 +273,27 @@ app.put('/api/profile', requireLogin, async (req, res) => {
     const surname = clean(req.body.surname);
     const username = clean(req.body.username);
     const headline = clean(req.body.headline);
+    const skills = clean(req.body.skills);
     const bio = clean(req.body.bio);
     const phone = clean(req.body.phone);
     const location = clean(req.body.location);
     const avatar = req.body.avatar || '';
 
     if (!firstName || !lastName || !surname || !username) {
-      return res.status(400).json({ message: 'First name, last name, surname, and username are required.' });
+      return res.status(400).json({
+        message: 'First name, last name, surname, and username are required.'
+      });
     }
 
-    const checkUsername = await pool.query('SELECT id FROM users WHERE LOWER(username) = $1 AND id != $2', [username.toLowerCase(), req.session.user.id]);
+    const checkUsername = await pool.query(
+      'SELECT id FROM users WHERE LOWER(username) = $1 AND id != $2',
+      [username.toLowerCase(), req.session.user.id]
+    );
+
     if (checkUsername.rows.length > 0) {
-      return res.status(409).json({ message: 'That username is already taken by another account.' });
+      return res.status(409).json({
+        message: 'That username is already taken by another account.'
+      });
     }
 
     await pool.query(`
@@ -272,20 +303,29 @@ app.put('/api/profile', requireLogin, async (req, res) => {
         surname = $3,
         username = $4,
         headline = $5,
-        bio = $6,
-        phone = $7,
-        location = $8,
-        avatar = $9
-      WHERE id = $10
-    `, [firstName, lastName, surname, username, headline, bio, phone, location, avatar, req.session.user.id]);
+        skills = $6,
+        bio = $7,
+        phone = $8,
+        location = $9,
+        avatar = $10
+      WHERE id = $11
+    `, [
+      firstName, lastName, surname, username, headline,
+      skills, bio, phone, location, avatar, req.session.user.id
+    ]);
 
     req.session.user.firstName = firstName;
     req.session.user.surname = surname;
 
-    res.json({ message: 'Profile updated successfully!', user: { firstName, surname, username, avatar } });
+    res.json({
+      message: 'Profile updated successfully!',
+      user: { firstName, surname, username, avatar, skills }
+    });
   } catch (error) {
     console.error('Update profile error:', error);
-    res.status(500).json({ message: 'Could not update profile.' });
+    res.status(500).json({
+      message: 'Could not update profile.'
+    });
   }
 });
 
@@ -623,6 +663,9 @@ label{font-size:14px;font-weight:bold}
       <label>Professional Title / Headline</label>
       <input name="headline" id="profHeadline" placeholder="e.g. Senior Software Engineer / Nursing Specialist">
 
+      <label>Skills</label>
+      <textarea name="skills" id="profSkills" rows="3" placeholder="e.g. JavaScript, Communication, Data Analysis"></textarea>
+
       <label>Bio & Summary</label>
       <textarea name="bio" id="profBio" rows="3" placeholder="Tell recruiters about your background, skills, and goals..."></textarea>
 
@@ -958,6 +1001,7 @@ $('menuProfile').addEventListener('click', async () => {
     $('profUsername').value = u.username || '';
     $('profEmail').value = u.email || '';
     $('profHeadline').value = u.headline || '';
+    $('profSkills').value = u.skills || '';
     $('profBio').value = u.bio || '';
     $('profPhone').value = u.phone || '';
     $('profLocation').value = u.location || '';
