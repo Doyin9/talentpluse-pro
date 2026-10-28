@@ -184,7 +184,57 @@ app.get('/api/me', requireLogin, async (req, res) => {
 res.status(500).json({ message: 'Session error.' });
   }
 });
+app.post('/api/change-password', requireLogin, async (req, res) => {
+  try {
+    const { currentPassword, newPassword } = req.body;
 
+    if (!currentPassword || !newPassword) {
+      return res.status(400).json({
+        message: 'Enter your current password and new password.'
+      });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({
+        message: 'New password must be at least 8 characters long.'
+      });
+    }
+
+    const result = await pool.query(
+      'SELECT "passwordHash" FROM users WHERE id = $1',
+      [req.session.user.id]
+    );
+
+    if (!result.rows.length) {
+      return res.status(404).json({ message: 'Account not found.' });
+    }
+
+    const passwordMatches = await bcrypt.compare(
+      currentPassword,
+      result.rows[0].passwordHash
+    );
+
+    if (!passwordMatches) {
+      return res.status(401).json({
+        message: 'Your current password is incorrect.'
+      });
+    }
+
+    const passwordHash = await bcrypt.hash(newPassword, 10);
+
+    await pool.query(
+      'UPDATE users SET "passwordHash" = $1 WHERE id = $2',
+      [passwordHash, req.session.user.id]
+    );
+
+    res.json({ message: 'Password changed successfully!' });
+  } catch (error) {
+    console.error('Change password error:', error);
+    res.status(500).json({
+      message: 'Could not change password. Please try again.'
+    });
+  }
+});
 app.get('/api/profile', requireLogin, async (req, res) => {
   try {
     const result = await pool.query('SELECT id, surname, "firstName", "lastName", username, email, headline, bio, phone, location, avatar, verified FROM users WHERE id = $1', [req.session.user.id]);
@@ -984,7 +1034,39 @@ $('backToDashboardFromProfileBtn').addEventListener('click', () => {
   $('mainDashboardContent').classList.remove('hidden');
 });
 
-$('menuPassword').addEventListener('click', () => alert('Change Password feature coming soon!'));
+$('menuPassword').addEventListener('click', async () => {
+  $('dropdownMenu').classList.add('hidden');
+
+  const currentPassword = prompt('Enter your current password:');
+  if (currentPassword === null || !currentPassword) return;
+
+  const newPassword = prompt('Enter your new password (at least 8 characters):');
+  if (newPassword === null || !newPassword) return;
+
+  const confirmPassword = prompt('Confirm your new password:');
+  if (confirmPassword === null || !confirmPassword) return;
+
+  if (newPassword.length < 8) {
+    alert('Your new password must be at least 8 characters long.');
+    return;
+  }
+
+  if (newPassword !== confirmPassword) {
+    alert('The new passwords do not match.');
+    return;
+  }
+
+  try {
+    const result = await api('/api/change-password', {
+      method: 'POST',
+      body: JSON.stringify({ currentPassword, newPassword })
+    });
+
+    alert(result.message);
+  } catch (error) {
+    alert(error.message);
+  }
+});
 
 $('logoutBtn').addEventListener('click', async () => {
   try {
