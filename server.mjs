@@ -172,7 +172,7 @@ app.post('/api/login', async (req, res) => {
 
 app.get('/api/me', requireLogin, async (req, res) => {
   try {
-    const result = await pool.query('SELECT id, surname, "firstName", "lastName", username, email, headline, bio, phone, location, avatar, verified FROM users WHERE id = $1', [req.session.user.id]);
+    const result = await pool.query('SELECT id, surname, "firstName", "lastName", username, email FROM users WHERE id = $1', [req.session.user.id]);
     if (!result.rows[0]) {
       return req.session.destroy(() => {
         res.status(401).json({ message: 'Please log in again.' });
