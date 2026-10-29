@@ -266,24 +266,34 @@ app.get('/api/profile', requireLogin, async (req, res) => {
 
 
 
+
 app.put('/api/profile', requireLogin, async (req, res) => {
   try {
     const firstName = clean(req.body.firstName);
     const lastName = clean(req.body.lastName);
     const surname = clean(req.body.surname);
     const username = clean(req.body.username);
+    const email = clean(req.body.email).toLowerCase();
     const headline = clean(req.body.headline);
     const skills = clean(req.body.skills);
     const bio = clean(req.body.bio);
-    const phone = clean(req.body.phone);
+    let phone = clean(req.body.phone);
     const location = clean(req.body.location);
     const avatar = req.body.avatar || '';
 
-    if (!firstName || !lastName || !surname || !username) {
+    if (!firstName || !lastName || !surname || !username || !email) {
       return res.status(400).json({
-        message: 'First name, last name, surname, and username are required.'
+        message: 'First name, last name, surname, username, and email are required.'
       });
     }
+
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      return res.status(400).json({ message: 'Enter a valid email address.' });
+    }
+
+    // Store only the Nigerian number after the +234 prefix.
+    phone = phone.replace(/[\s()-]/g, '');
+    phone = phone.replace(/^\+234/, '').replace(/^0/, '');
 
     const checkUsername = await pool.query(
       'SELECT id FROM users WHERE LOWER(username) = $1 AND id != $2',
@@ -296,33 +306,54 @@ app.put('/api/profile', requireLogin, async (req, res) => {
       });
     }
 
+    const checkEmail = await pool.query(
+      'SELECT id FROM users WHERE LOWER(email) = $1 AND id != $2',
+      [email, req.session.user.id]
+    );
+
+    if (checkEmail.rows.length > 0) {
+      return res.status(409).json({
+        message: 'That email address is already used by another account.'
+      });
+    }
+
     await pool.query(`
       UPDATE users SET
         "firstName" = $1,
         "lastName" = $2,
         surname = $3,
         username = $4,
-        headline = $5,
-        skills = $6,
-        bio = $7,
-        phone = $8,
-        location = $9,
-        avatar = $10
-      WHERE id = $11
+        email = $5,
+        headline = $6,
+        skills = $7,
+        bio = $8,
+        phone = $9,
+        location = $10,
+        avatar = $11
+      WHERE id = $12
     `, [
-      firstName, lastName, surname, username, headline,
+      firstName, lastName, surname, username, email, headline,
       skills, bio, phone, location, avatar, req.session.user.id
     ]);
 
     req.session.user.firstName = firstName;
     req.session.user.surname = surname;
+    req.session.user.username = username;
+    req.session.user.email = email;
 
     res.json({
       message: 'Profile updated successfully!',
-      user: { firstName, surname, username, avatar, skills }
+      user: { firstName, lastName, surname, username, email, avatar, skills }
     });
   } catch (error) {
     console.error('Update profile error:', error);
+
+    if (error.code === '23505') {
+      return res.status(409).json({
+        message: 'That username or email is already in use.'
+      });
+    }
+
     res.status(500).json({
       message: 'Could not update profile.'
     });
@@ -670,13 +701,22 @@ label{font-size:14px;font-weight:bold}
       <textarea name="bio" id="profBio" rows="3" placeholder="Tell recruiters about your background, skills, and goals..."></textarea>
 
       <div class="row">
-        <div><label>Phone Number</label><input name="phone" id="profPhone" type="tel" placeholder="+234..."></div>
-        <div><label>Location</label><input name="location" id="profLocation" placeholder="e.g. Lagos, Nigeria"></div>
-      </div>
-
+  <div>
+    <label>Phone Number</label>
+    <div style="display:flex; gap:8px; align-items:center;">
+      <span style="padding:12px; background:#e5ebf6; border-radius:7px; font-weight:bold;">+234</span>
+      <input name="phone" id="profPhone" type="tel"
+        placeholder="8012345678" inputmode="numeric"
+        style="flex:1; min-width:0;">
+    </div>
+  </div>
+  <div>
+    <label>Location</label>
+    <input name="location" id="profLocation" placeholder="e.g. Lagos, Nigeria">
+  </div>
+</div>
       <label>Email Address (Account Identifier)</label>
-      <input id="profEmail" disabled style="background:#f1f5f9;">
-
+<input id="profEmail" type="email" name="email" required autocomplete="email">
       <button type="submit" style="width:100%; margin-top:10px;">Save Profile Changes</button>
     </form>
     <p id="profileMessage" class="notice hidden" role="status"></p>
