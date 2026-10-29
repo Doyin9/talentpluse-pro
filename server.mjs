@@ -64,9 +64,15 @@ async function initDB() {
   `);
 
     await pool.query(`
-    ALTER TABLE users
-    ADD COLUMN IF NOT EXISTS skills TEXT DEFAULT ''
-  `);
+  ALTER TABLE users
+    ADD COLUMN IF NOT EXISTS headline TEXT DEFAULT '',
+    ADD COLUMN IF NOT EXISTS skills TEXT DEFAULT '',
+    ADD COLUMN IF NOT EXISTS bio TEXT DEFAULT '',
+    ADD COLUMN IF NOT EXISTS phone TEXT DEFAULT '',
+    ADD COLUMN IF NOT EXISTS location TEXT DEFAULT '',
+    ADD COLUMN IF NOT EXISTS avatar TEXT DEFAULT '',
+    ADD COLUMN IF NOT EXISTS verified BOOLEAN DEFAULT false
+`);
   await pool.query(`
     CREATE TABLE IF NOT EXISTS applications (
       id SERIAL PRIMARY KEY,
